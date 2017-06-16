@@ -1,3 +1,4 @@
+import numpy as np
 """Calculates l1, l2, and l3 for n points in a spherical detector with distance d"""
 def slope(*points):
     return(points[0][1] - points[1][1]) / (points[0][0] - points[1][0])
@@ -26,8 +27,16 @@ def calc_arc(num_points, sphere_radius, height, width):
     # padding from top and bottom
     # delete '+ 2' to remove padding
     separation = height / (num_points + 2)
-    for i in range(num_points):
-        current_height = (i + 1) * separation
-        # arcs can't be flat
-        # calculates the radius of the circle created by the 3 points on the separator
-        large_radius = abs((width ** 2)/(8 * current_height)) + (current_height * .5)
+    for emitter in range(num_points):
+        for detector in range(num_points):
+            for reciever in range(num_points):
+
+                e_coord = (-width/2, separation * (emitter + 1))
+                d_coord = (0, separation * (detector + 1))
+                r_coord = (width/2, separation * (reciever + 1))
+
+                large_radius = radius(e_coord, d_coord, r_coord)
+
+                chord = (sphere_radius ** 2 - (large_radius - sphere_radius) ** 2) ** .5
+                arc_radians = 4 * np.arcsin(x ** 2 / (2 * large_radius))
+                l2 = large_radius * arc_radians
