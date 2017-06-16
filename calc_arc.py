@@ -9,66 +9,125 @@ def midpoint(*points):
     return (points[0][0] + points[1][0]) * .5, (points[0][1] + points[1][1]) * .5
 
 
-def radius(*points):
-    """ Calculate the radius of a circle based on 3 points """
-    # perpendicular slope of both chords
-
-    pt1, pt2, pt3 = points
-
-    perp_slope_0 = 0
-    perp_slope_1 = 0
-
-    for i in range(3):
-        try:
-            perp_slope_0 = -(slope(pt1, pt2) ** -1)
-            perp_slope_1 = -(slope(pt2, pt3) ** -1)
-            break
-        except ZeroDivisionError:
-            # TODO this doesn't cover all orderings but it mostly works
-            pt1, pt2, pt3 = pt3, pt1, pt2
-
-    if perp_slope_0 == 0 and perp_slope_1 == 0:
-        raise ValueError("Given points are co-linear, cannot make a circle")
-
-    diff_slope = perp_slope_1 - perp_slope_0
-
-    if diff_slope == 0:
-        raise ValueError("Given points are co-linear, cannot make a circle")
-
-    offset_0 = perp_slope_0 * -midpoint(pt1, pt2)[0] + midpoint(pt1, pt2)[1]
-    offset_1 = perp_slope_1 * -midpoint(pt2, pt3)[0] + midpoint(pt2, pt3)[1]
-    print(pt1, pt2, pt3)
-
-    x = (offset_1 - offset_0) / diff_slope
-    y = perp_slope_0 * (x - midpoint(pt1, pt2)[0]) + midpoint(pt1, pt2)[1]
-
-    radius = ((pt1[0] - x) ** 2 + (pt1[1] - y) ** 2) ** .5
-
-    return radius
+def dist(p1, p2):
+    total = 0
+    for v1, v2 in zip(p1, p2):
+        total += (v1 - v2) ** 2
+    return total ** .5
 
 
-def overlapping_chord(r1, r2):
-    return (r1**2 - (r2 - r1) ** 2) ** .5
+def vec_add(p1, p2):
+    newvec = []
+    for v1, v2 in zip(p1, p2):
+        newvec.append(v1 + v2)
+    return tuple(newvec)
 
 
-def chord_angle(chord, radius):
-    return 2 * np.arcsin(x/(2*radius))
+def collinear(*args):
+    if args[0][0] == args[1][0]:
+        for x, y in args:
+            if x != args[0][0]:
+                return False
+    m = (args[0][1] - args[1][1]) / (args[0][0] - args[1][0])
+    b = args[0][1] - (m * args[0][0])
+    for x, y in args:
+        if round(y, 5) != round(m*x + b, 5):
+            return False
+    return True
+
+
+class Circle(object):
+    def __str__(self):
+        return "radius:{} center:{}".format(self.radius, self.center)
+    def __init__(self, *args):
+        if len(args) == 3 and hasattr(args[1], '__iter__'):
+            """ Complex solution for the radius of a circle from 3 points returns radius, centerx, centery """
+            if collinear(*args):
+                raise ValueError("Points used to init circle are collinear")
+                return
+            p1, p2, p3 = [complex(*p) for p in args]
+            for i in range(3):
+                try:
+                    p1, p2, p3 = p3, p1, p2
+                    diff = p3 - p1
+                    diff /= p2 - p1
+                    center = (p1 - p2) * (diff - abs(diff) **2) / 2j / diff.imag - p1
+                    self.center = center.real, center.imag
+                except ZeroDivisionError:
+                    pass
+            self.radius = abs(complex(*self.center) + p1)
+            self.x = self.center[0]
+            self.y = self.center[1]
+        elif len(args) == 3:
+            self.radius = args[0]
+            self.x = args[1]
+            self.y = args[2]
+            self.center = (self.x, self.y)
+        else:
+            self.radius = args[0]
+            self.center = args[1]
+            self.x = self.center[0]
+            self.y = self.center[1]
+
+    def chord_angle(self, chord):
+        return 2 * np.arcsin(chord/(2*self.radius))
+
+    def intersection(self, other):
+        """ 
+        returns the points of overlap between 2 circles at a given distance
+        """
+        d = dist(other.center, self.center)
+        if self.center == other.center:
+            raise ValueError("Circles have the same center")
+            return
+        if d > self.radius + other.radius:
+            raise ValueError("Circles do not touch")
+            return
+        mid_dst = (self.radius **2 - other.radius **2 + d **2) / (2 * d)
+        relative_pt = [p * mid_dst / d for p in vec_add(other.center, [-1 * i for i in self.center])]
+        mid_pt = vec_add(self.center, relative_pt)
+        chord_len = 2 * (abs(self.radius ** 2 - mid_dst ** 2)) ** .5
+        slope = chord_len / (2 * d)
+        inter_pt = mid_pt[0] + slope * (other.y - self.y), mid_pt[1] - slope * (other.x - self.x)
+        inter_pt2 = mid_pt[0] - slope * (other.y - self.y), mid_pt[1] + slope * (other.x - self.x)
+        return inter_pt, inter_pt2
+
+    def arc_length(self, p1, p2):
+        central_angle = self.chord_angle(dist(p1, p2))
+        return central_angle * self.radius
 
 def calc_arc(num_points, sphere_radius, height, width):
-    # if an odd number is entered for num_points, it will just do num_points - 1 since the center point can't have an
-    # arc through it
-    if num_points % 2 != 0:
-        num_points -= 1
-    if num_points <= 0:
-        raise ValueError("Number of points was equal to or less than 1.")
     # dist between each point
     # padding from top and bottom
     # delete '+ 2' to remove padding
     separation = height / (num_points + 2)
-    for i in range(num_points):
-        current_height = (i + 1) * separation
-        # arcs can't be flat
-        # calculates the radius of the circle created by the 3 points on the separator
-        large_radius = abs((width ** 2)/(8 * current_height)) + (current_height * .5)
+    lengths = []
+    for emitter in range(num_points):
+        for detector in range(num_points):
+            for reciever in range(num_points):
 
-print(radius((3, 4), (-3, 4), (3, -4)))
+                e_coord = (-width/2, separation * (emitter + 1))
+                d_coord = (0, separation * (detector + 1))
+                r_coord = (width/2, separation * (reciever + 1))
+
+                if collinear(e_coord, d_coord, r_coord):
+                    continue
+
+                # sometimes it doesn't get that points are collinear because of floating point misses
+                # and then it winds up with complex numbers and breaks
+                # and rounding doesn't seem to help
+                # So i'ma just skip those
+                large = Circle(e_coord, d_coord, r_coord)
+                small = Circle(sphere_radius, (0, 0))
+
+                inter_pts = large.intersection(small)
+                e_pt, r_pt = min(inter_pts, key=lambda x: dist(x, e_coord)),  max(inter_pts, key=lambda x: dist(x, e_coord))
+
+                l1 = large.arc_length(e_coord, e_pt)
+                l2 = large.arc_length(e_pt, r_pt)
+                l3 = large.arc_length(r_pt, r_coord)
+                lengths.append((l1, l2, l3))
+    return lengths
+
+print(calc_arc(5, 7, 10, 30))
+
