@@ -96,38 +96,32 @@ class Circle(object):
         central_angle = self.chord_angle(dist(p1, p2))
         return central_angle * self.radius
 
-def calc_arc(num_points, sphere_radius, height, width):
+
+def calc_times(emitters, middles, detectors, sphere_radius, ref_index):
     # dist between each point
     # padding from top and bottom
     # delete '+ 2' to remove padding
-    separation = height / (num_points + 2)
-    lengths = []
-    for emitter in range(num_points):
-        for detector in range(num_points):
-            for reciever in range(num_points):
-
-                e_coord = (-width/2, separation * (emitter + 1))
-                d_coord = (0, separation * (detector + 1))
-                r_coord = (width/2, separation * (reciever + 1))
-
-                if collinear(e_coord, d_coord, r_coord):
+    times = []
+    for start in emitters:
+        for middle in middles:
+            for end in detectors:
+                if collinear(start, middle, end):
                     continue
 
                 # sometimes it doesn't get that points are collinear because of floating point misses
                 # and then it winds up with complex numbers and breaks
                 # and rounding doesn't seem to help
                 # So i'ma just skip those
-                large = Circle(e_coord, d_coord, r_coord)
+                large = Circle(start, middle, end)
                 small = Circle(sphere_radius, (0, 0))
 
                 inter_pts = large.intersection(small)
-                e_pt, r_pt = min(inter_pts, key=lambda x: dist(x, e_coord)),  max(inter_pts, key=lambda x: dist(x, e_coord))
+                e_pt, r_pt = min(inter_pts, key=lambda x: dist(x, start)),  max(inter_pts, key=lambda x: dist(x, start))
 
-                l1 = large.arc_length(e_coord, e_pt)
+                l1 = large.arc_length(start, e_pt)
                 l2 = large.arc_length(e_pt, r_pt)
-                l3 = large.arc_length(r_pt, r_coord)
-                lengths.append((l1, l2, l3))
-    return lengths
+                l3 = large.arc_length(r_pt, end)
+                times.append((l1, l2 * ref_index, l3))
+    return times
 
-print(calc_arc(5, 7, 10, 30))
 
