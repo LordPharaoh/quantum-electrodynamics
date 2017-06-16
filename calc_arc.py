@@ -8,42 +8,12 @@ def midpoint(*points):
 
 
 def radius(*points):
-    """ Calculate the radius of a circle based on 3 points """
-    # perpendicular slope of both chords
-
-    pt1, pt2, pt3 = points
-
-    perp_slope_0 = 0
-    perp_slope_1 = 0
-
-    for i in range(3):
-        try:
-            perp_slope_0 = -(slope(pt1, pt2) ** -1)
-            perp_slope_1 = -(slope(pt2, pt3) ** -1)
-            break
-        except ZeroDivisionError:
-            pt1, pt2, pt3 = pt3, pt1, pt2
-
-    if perp_slope_0 == 0 and perp_slope_1 == 0:
-        raise ValueError("Given points are co-linear, cannot make a circle")
-
-    diff_slope = perp_slope_0 - perp_slope_1
-
-    if diff_slope == 0:
-        raise ValueError("Given points are co-linear, cannot make a circle")
-
-    offset_0 = perp_slope_0 * -midpoint(pt1, pt2)[0] + midpoint(pt1, pt2)[1]
-    offset_1 = perp_slope_1 * -midpoint(pt2, pt3)[0] + midpoint(pt2, pt3)[1]
-    print(offset_0)
-    print(offset_1)
-
-    x = (offset_1 - offset_0) / diff_slope
-    y = perp_slope_0 * (x - midpoint(pt1, pt2)[0]) + midpoint(pt1, pt2)[1]
-
-    radius = ((pt1[0] - x) ** 2 + (pt1[1] - y) ** 2) ** .5
-
-    return radius
-
+    """ Complex solution for the radius of a circle from 3 points """
+    p1, p2, p3 = [complex(*p) for p in points]
+    diff = p1 - p3
+    diff /= p2 - p1
+    center = (p1 - p2) * (diff - abs(diff) **2) / 2j /diff.imag - p1
+    return abs(center + p1)
 
 def calc_arc(num_points, sphere_radius, height, width):
     # if an odd number is entered for num_points, it will just do num_points - 1 since the center point can't have an
@@ -61,7 +31,3 @@ def calc_arc(num_points, sphere_radius, height, width):
         # arcs can't be flat
         # calculates the radius of the circle created by the 3 points on the separator
         large_radius = abs((width ** 2)/(8 * current_height)) + (current_height * .5)
-
-print(slope((0,0), (1, 1)))
-print(midpoint((0, 0), (0, 1)))
-print(radius((3, 4), (-3, 4), (3, -4)))
