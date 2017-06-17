@@ -5,6 +5,8 @@ import numpy as np
 from random import uniform
 from math import isnan
 
+#TODO vector class
+
 def slope(*points):
     return(points[0][1] - points[1][1]) / (points[0][0] - points[1][0])
 
@@ -27,6 +29,9 @@ def vec_add(p1, p2):
     return tuple(newvec)
 
 
+def scalar_multiply(pt, scalar):
+    return tuple([pt * i for i in scalar])
+
 def collinear(*args):
     if args[0][0] == args[1][0]:
         for x, y in args:
@@ -38,6 +43,12 @@ def collinear(*args):
         if round(y, 5) != round(m*x + b, 5):
             return False
     return True
+
+
+def cross_product(vec1, vec2):
+    return [vec1[1] * vec2[2] - vec1[2] * vec2[1],
+            -1 * (vec1[0] * vec2[2] - vec1[2] * vec2[0]),
+            vec1[0] * vec2[1] - vec1[1] * vec2[0]]
 
 
 class Circle(object):
@@ -105,6 +116,18 @@ class Circle(object):
         return plt.Circle(self.center, self.radius, color=color)
 
 
+def Plane(object):
+
+    def __init__(self, *args):
+        if len(args) == 3 and all(hasattr(p, '__iter__') and len(p) == 3 for p in args):
+            vec1 = vec_add(args[1], scalar_multiply(args[0], -1))
+            vec2 = vec_add(args[2], scalar_multiply(args[0], -1))
+            c_p = cross_product(vec1, vec2)
+
+            self.a, self.b, self.c = c_p
+            self.d = c_p[0] * args[0][1] + c_p[1] * args[0][1] + c_p[2] * args[0][2]
+
+
 def calc_times(emitters, middles, detectors, sphere_radius, ref_index):
     """
     :param emitters: list of points of all x-ray emitters
@@ -121,6 +144,8 @@ def calc_times(emitters, middles, detectors, sphere_radius, ref_index):
     for start in emitters:
         for middle in middles:
             for end in detectors:
+
+                plane = Plane(start, middle, end)
 
                 if collinear(start, middle, end):
                     continue
@@ -142,7 +167,7 @@ def calc_times(emitters, middles, detectors, sphere_radius, ref_index):
     return times
 
 # so maybe I've gone sliiiightly overboard with those list comprehensions
-#times = [( i[1].center, i[1].radius * 2, i[1].radius * 2, 0, np.arctan(slope(i[2][0], i[0].center)),
+# times = [( i[1].center, i[1].radius * 2, i[1].radius * 2, 0, np.arctan(slope(i[2][0], i[0].center)),
         #np.arctan(slope(i[1][0], i[0].center)), ((20-sum(i[0]/20)) for i in
 
 times = calc_times([(-10, 0)], [(0, uniform(-5, 5)) for i in range(50)], [(10, uniform(-5, 5)) for i in range(50)], 6, .2)
