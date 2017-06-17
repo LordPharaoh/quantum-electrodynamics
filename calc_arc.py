@@ -1,5 +1,9 @@
 """Calculates l1, l2, and l3 for n points in a spherical detector with distance d"""
+import matplotlib.pyplot as plt
+import matplotlib.patches as ptch
 import numpy as np
+from random import uniform
+from math import isnan
 
 def slope(*points):
     return(points[0][1] - points[1][1]) / (points[0][0] - points[1][0])
@@ -39,6 +43,7 @@ def collinear(*args):
 class Circle(object):
     def __str__(self):
         return "radius:{} center:{}".format(self.radius, self.center)
+
     def __init__(self, *args):
         if len(args) == 3 and hasattr(args[1], '__iter__'):
             """ Complex solution for the radius of a circle from 3 points returns radius, centerx, centery """
@@ -96,8 +101,19 @@ class Circle(object):
         central_angle = self.chord_angle(dist(p1, p2))
         return central_angle * self.radius
 
+    def plt_circle(self, color='blue'):
+        return plt.Circle(self.center, self.radius, color=color)
+
 
 def calc_times(emitters, middles, detectors, sphere_radius, ref_index):
+    """
+    :param emitters: list of points of all x-ray emitters
+    :param middles: list of points of all arc spots inside the sphere
+    :param detectors: list of points of all detectors
+    :param sphere_radius: radius of sphere of material
+    :param ref_index: index of refraction of material with x-rays (*not* the 1- thing, TODO)
+    :return: [(time_to_material, time_through_material, time_to_detector), ... ]
+    """
     # dist between each point
     # padding from top and bottom
     # delete '+ 2' to remove padding
@@ -105,6 +121,7 @@ def calc_times(emitters, middles, detectors, sphere_radius, ref_index):
     for start in emitters:
         for middle in middles:
             for end in detectors:
+
                 if collinear(start, middle, end):
                     continue
 
@@ -121,7 +138,24 @@ def calc_times(emitters, middles, detectors, sphere_radius, ref_index):
                 l1 = large.arc_length(start, e_pt)
                 l2 = large.arc_length(e_pt, r_pt)
                 l3 = large.arc_length(r_pt, end)
-                times.append((l1, l2 * ref_index, l3))
+                times.append(((l1, l2 * ref_index, l3), large, inter_pts))
     return times
 
+# so maybe I've gone sliiiightly overboard with those list comprehensions
+#times = [( i[1].center, i[1].radius * 2, i[1].radius * 2, 0, np.arctan(slope(i[2][0], i[0].center)),
+        #np.arctan(slope(i[1][0], i[0].center)), ((20-sum(i[0]/20)) for i in
 
+times = calc_times([(-10, 0)], [(0, uniform(-5, 5)) for i in range(50)], [(10, uniform(-5, 5)) for i in range(50)], 6, .2)
+fig, ax = plt.subplots()
+ax.set_xlim((-10, 10))
+ax.set_ylim((-10, 10))
+max_time = max([sum(t[0]) for t in times])
+for time, circle, inter_pts in times:
+    time = sum(time)
+    angles = (np.arctan(slope(p, circle.center)) for p in inter_pts)
+    color = (time/ max_time, (max_time - time) / max_time, 0, .1)
+    ax.add_patch(ptch.Arc(circle.center, circle.radius * 2, circle.radius * 2, 0, *angles, edgecolor=color))
+
+ax.add_artist(plt.Circle((0, 0), 6, color='blue', fill=False))
+
+fig.savefig('plotcircles.png')
