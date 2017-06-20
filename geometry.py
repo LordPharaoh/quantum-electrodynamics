@@ -7,7 +7,7 @@ class Vector(object):
     """ 
     I didn't mean to create a whole new vector class, I was using the one from vectors as well as a bunch of random
     helper functions from the beginning, and then I noticed the vectors.vector class was really bad an made an 
-    improvement or two, and the next thing you know it's its own object
+    improvement or two, and the next thing you know it's its own class
     """
     def __init__(self, *args):
         self.iterable = args
@@ -188,7 +188,7 @@ class Plane(object):
         self.center = self.closest(Point(0, 0, 0))
         self.a, self.b, self.c = self.cross_product
         if _axis:
-            self.x_axis = Plane(self.closest(Point(1, 0, 0)) - self.center, self.center, _axis=False)# draw sphere
+            self.x_axis = Plane(self.closest(Point(1, 0, 0)) - self.center, self.center, _axis=False)
             self.y_axis = Plane(self.x_axis.cross_product @ self.cross_product, self.center, _axis=False)
 
     def closest(self, point):
@@ -204,6 +204,25 @@ class Plane(object):
         y = self.y_axis.distance(point)
         x = self.x_axis.distance(point)
         return Point(x, y)
+
+    def unproject(self, point):
+        # WHAT THE HECK I worked this all out and typed it in and it worked first time
+        # This has literally never happened to me before and I was fully expecting to check 3 pages of work
+        # and typos over and over
+        x_offset = (point.x * abs(self.x_axis.cross_product) - self.x_axis.d) / self.x_axis.a
+        y_divisor = self.y_axis.b * self.x_axis.a - self.y_axis.a * self.x_axis.b
+        y_term_1 = point.y * self.x_axis.a * abs(self.y_axis.cross_product)
+        y_term_2 = self.y_axis.d * self.x_axis.a
+        y_term_3 = self.y_axis.a * self.x_axis.a * x_offset
+        y_offset = (y_term_1 - y_term_2 - y_term_3) / y_divisor
+        y_coefficient = (self.y_axis.a * self.x_axis.c - self.x_axis.a * self.y_axis.c) / y_divisor
+        z_offset = -self.a * x_offset + ((self.a * self.x_axis.b * y_offset) / self.x_axis.a) - self.b * y_offset
+        z_divisor = -((self.a * self.x_axis.b * y_coefficient) / self.x_axis.a) \
+                    - ((self.a * self.x_axis.c)/self.x_axis.a) + self.b * y_coefficient + self.c
+        z = z_offset / z_divisor
+        y = y_offset + y_coefficient * z
+        x = x_offset + ((-self.x_axis.b * y - self.x_axis.c * z)/self.x_axis.a)
+        return Vector(x, y, z)
 
     def __str__(self):
         return "Plane: {}x + {}y + {}z + {} = 0".format(*self.cross_product, self.d)

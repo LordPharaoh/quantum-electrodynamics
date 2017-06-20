@@ -65,6 +65,7 @@ max_time = max([sum(t[0]) for t in times])
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
+# Draw arcs
 for time, start, middle, end in times:
     time = sum(time)
     color = (time/ max_time, (max_time - time) / max_time, 0, 1)
@@ -79,6 +80,7 @@ y = np.sin(u)*np.sin(v) * sphere_radius
 z = np.cos(v) * sphere_radius
 ax.plot_wireframe(x, y, z, color=(0, 0, .5, .1))
 
+# Draw emitters and stuff
 ex, ey, ez = zip(*emitters)
 dx, dy, dz = zip(*detectors)
 rx, ry, rz = zip(*receivers)
@@ -86,6 +88,7 @@ ax.scatter(ex, ey, ez, c="red")
 ax.scatter(dx, dy, dz, c="blue")
 ax.scatter(rx, ry, rz, c="green")
 
+# Set up and display graph
 ax.set_ylim((-10, 10))
 ax.set_xlim((-10, 10))
 ax.set_zlim((-10, 10))
