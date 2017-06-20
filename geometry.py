@@ -14,6 +14,7 @@ class Vector(object):
         self.x = self.iterable[0]
         self.y = self.iterable[1]
         self.z = self.iterable[1]
+        self.a, self.b, self.c = self.x, self.y, self.z
 
     def slope(*points):
         points = list(points)
@@ -84,6 +85,14 @@ class Vector(object):
     def __str__(self):
         return str("<{}>".format(str(self.iterable)[1:-1]))
 
+    def __repr__(self):
+        return self.__str__()
+
+    def __len__(self):
+        return len(self.iterable)
+
+    def cross(self, other):
+        return self.__matmul__(other)
 # easier to think about
 Point = Vector
 
@@ -120,7 +129,6 @@ class Circle(object):
             self.center = Point(*args[1])
             self.x = self.center.x
             self.y = self.center.y
-        self.a, self.b, self.c = self.x, self.y, self.z
 
     def chord_angle(self, chord):
         return 2 * np.arcsin(chord/(2*self.radius))
@@ -153,25 +161,35 @@ class Circle(object):
 
 class Plane(object):
 
-    def __init__(self, *args):
+    def __init__(self, *args, _axis=True):
 
         if len(args) == 3 and all(isinstance(p, Point) for p in args):
             vec1 = args[0] - args[1]
             vec2 = args[1] - args[2]
 
             self.cross_product = vec1 @ vec2
-            self.a, self.b, self.c = self.cross_product
             self.d = -1 * (self.cross_product * args[0])
             # equation of plane: ax+by+cz+d=0
 
             # for mapping points to 2d space
-            self.center = (args[0])
 
         elif len(args) == 4:
                 self.cross_product = Vector(*args[:3])
                 self.d = args[4]
+
+        elif len(args) == 2 and isinstance(args[0], Vector) and isinstance(args[1], Point):
+            self.cross_product = args[0]
+            self.d = -1 * (self.cross_product * args[1])
+
         else:
-            raise TypeError("Arguments must be either 3 Points or 4 coefficients a, b, c, d")
+            raise TypeError("Arguments must be either 3 Points, a Vector followed "
+                            "by a Point, or 4 coefficients a, b, c, d")
+
+        self.center = self.closest(Point(0, 0, 0))
+        self.a, self.b, self.c = self.cross_product
+        if _axis:
+            self.x_axis = Plane(self.closest(Point(1, 0, 0)) - self.center, self.center, _axis=False)# draw sphere
+            self.y_axis = Plane(self.x_axis.cross_product @ self.cross_product, self.center, _axis=False)
 
     def closest(self, point):
         t = -(self.cross_product * point + self.d) / (abs(self.cross_product) ** 2)
@@ -179,11 +197,14 @@ class Plane(object):
 
     def distance(self, point):
         if isinstance(point, Point):
-            return abs((self.cross_product * point) + self.d) / abs(self.cross_product)
+            return ((self.cross_product * point) + self.d) / abs(self.cross_product)
 
     def project(self, point):
-        self.center.distance(self.closest(Point))
+        point = self.closest(point)
+        y = self.y_axis.distance(point)
+        x = self.x_axis.distance(point)
+        return Point(x, y)
 
     def __str__(self):
-        return "Plane with equation: {}x + {}y + {}z + {} = 0".format(*self.cross_product, self.d)
+        return "Plane: {}x + {}y + {}z + {} = 0".format(*self.cross_product, self.d)
 
