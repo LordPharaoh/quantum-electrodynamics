@@ -1,6 +1,7 @@
 import vectors as v
 import numpy as np
 import matplotlib.pyplot as plt
+from random import shuffle
 
 
 class Vector(object):
@@ -16,19 +17,11 @@ class Vector(object):
         self.z = self.iterable[1]
         self.a, self.b, self.c = self.x, self.y, self.z
 
-    def slope(*points):
-        points = list(points)
-        for idx, p in enumerate(points):
-            if not isinstance(p, v.Point):
-                points[idx] = v.Point(*p, 0)
-        return(points[0].y - points[1].y) / (points[0].x - points[1].x)
+    def slope(self, point):
+        return (self.y - point.y) / (self.x - point.x)
 
-    def midpoint(*points):
-        points = list(points)
-        for idx, p in enumerate(points):
-            if not isinstance(p, v.Point):
-                points[idx] = v.Point(*p, 0)
-        return (points[0].x + points[1].x) * .5, (points[0].y + points[1].y) * .5
+    def midpoint(self, point):
+        return Vector((self.x + point.x) * .5, (self.y + point.y) * .5)
 
     def distance(self, p2):
         total = 0
@@ -98,25 +91,38 @@ Point = Vector
 
 
 class Circle(object):
+    """ Represents a 2 dimensional circle """
     def __str__(self):
         return "radius:{} center:{}".format(self.radius, self.center)
+
+    @staticmethod
+    def _perpendicular_bisector(point1, point2):
+        mid = Point.midpoint(point1, point2)
+        slope = Point.slope(point1, point2)
+        m = -(slope ** -1)
+        b = m * -mid.x + mid.y
+        return m, b
+
+    @staticmethod
+    def _intersection(mb1, mb2):
+        x = (mb2[1] - mb1[1]) / (mb1[0] - mb2[0])
+        y = x * mb1[0] + mb1[1]
+        return Point(x, y)
 
     def __init__(self, *args):
         if len(args) == 3 and all([isinstance(p, Point) for p in args]):
             """ Complex solution for the radius of a circle from 3 points returns radius, centerx, centery """
-            if Vector.collinear(*args):
-                raise ValueError("v.Points used to init circle are collinear")
-            p1, p2, p3 = [complex(*list(p)) for p in args]
-            for i in range(3):
+            if Point.collinear(*args):
+                raise ValueError("s.Points used to init circle are collinear")
+            points = list(args)
+            for i in range(6):
                 try:
-                    p1, p2, p3 = p3, p1, p2
-                    diff = p3 - p1
-                    diff /= p2 - p1
-                    center = (p1 - p2) * (diff - abs(diff) ** 2) / 2j / diff.imag - p1
-                    self.center = Point(center.real, center.imag)
+                    self.center = self._intersection(Circle._perpendicular_bisector(points[0], points[1]),
+                                                     Circle._perpendicular_bisector(points[1], points[2]))
+                    break
                 except ZeroDivisionError:
-                    pass
-            self.radius = abs(complex(*self.center) + p1)
+                    shuffle(points)
+            self.radius = self.center.distance(points[0])
             self.x = self.center.x
             self.y = self.center.y
         elif len(args) == 3:
@@ -160,7 +166,7 @@ class Circle(object):
 
 
 class Plane(object):
-
+    """ Plane in 3D helps transform 2D Ops (especially circle) back and forth from 3D """
     def __init__(self, *args, _axis=True):
 
         if len(args) == 3 and all(isinstance(p, Point) for p in args):
