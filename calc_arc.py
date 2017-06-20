@@ -19,10 +19,13 @@ def arc3d(start, p2, end, num_points):
     increment = radian_len / num_points
     diff = pr1 - circle.center
     offset = np.arctan(diff.y / diff.x)
+    # the range of arcsin is from -90 to 90 so (or radians but that's harder to type)
+    if diff.x < 0:
+        offset += np.pi / 2
+
     points3d = []
-    points3d.append(start)
-    for p in range(0, num_points-3):
-        radian = increment * p + offset
+    for p in range(num_points):
+        radian = increment * p - offset
         point = circle.center + Vector(np.sin(radian) * circle.radius, np.cos(radian) * circle.radius)
         points3d.append(plane.unproject(point))
     points3d.append(end)
@@ -87,8 +90,9 @@ sphere_radius = 6
 index_refraction = .2
 
 emitters = [Point(-10, 0, 0)]
-detectors = [Point(0, uniform(-5, 5), uniform(-5, 5)) for i in range(10)]
-receivers = [Point(10, uniform(-5, 5), uniform(-5, 5)) for i in range(10)]
+detectors = [Point(0, uniform(-5, 5), uniform(-3, 3)) for i in range(10)]
+#receivers = [Point(10, uniform(-5, 5), uniform(-3, 3)) for i in range(10)]
+receivers = [Point(10, 0, 0)]
 
 times = calc_times(emitters, detectors, receivers, sphere_radius, index_refraction)
 max_time = max([sum(t[0]) for t in times])
