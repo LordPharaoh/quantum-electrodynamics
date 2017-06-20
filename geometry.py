@@ -222,7 +222,7 @@ class Plane(object):
         z = z_offset / z_divisor
         y = y_offset + y_coefficient * z
         x = x_offset + ((-self.x_axis.b * y - self.x_axis.c * z)/self.x_axis.a)
-        return Vector(x, y, z)
+        return Vector(x, y, z) + self.center
 
     def __str__(self):
         return "Plane: {}x + {}y + {}z + {} = 0".format(*self.cross_product, self.d)
