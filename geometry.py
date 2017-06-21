@@ -1,20 +1,23 @@
-import vectors as v
 import numpy as np
 import matplotlib.pyplot as plt
 from random import shuffle
 
 
-class Vector(object):
+class Vector(list):
     """ 
     I didn't mean to create a whole new vector class, I was using the one from vectors as well as a bunch of random
     helper functions from the beginning, and then I noticed the vectors.vector class was really bad an made an 
     improvement or two, and the next thing you know it's its own class
     """
     def __init__(self, *args):
-        self.iterable = args
-        self.x = self.iterable[0]
-        self.y = self.iterable[1]
-        self.z = self.iterable[1]
+        if len(args) == 1:
+            super(Vector, self).__init__(args[0])
+        else:
+            super(Vector, self).__init__(args)
+        print(self)
+        self.x = self[0]
+        self.y = self[1]
+        self.z = self[1]
         self.a, self.b, self.c = self.x, self.y, self.z
 
     def slope(self, point):
@@ -41,12 +44,6 @@ class Vector(object):
                 return False
         return True
 
-    def __getitem__(self, n):
-        return self.iterable.__getitem__(n)
-
-    def __iter__(self):
-        return self.iterable.__iter__()
-
     def __add__(self, other):
         if isinstance(other, Vector):
             return Vector(*[s + o for s, o in zip(self, other)])
@@ -70,19 +67,16 @@ class Vector(object):
 
     def __matmul__(self, other):
         # Too lazy to do cross products myself
-        return Vector(*v.Vector.from_list(self.iterable).cross(v.Vector.from_list(other.iterable)).vector)
+        return Vector(np.cross(self, other))
 
     def __abs__(self):
-        return self.distance(Vector(*[0 for i in self.iterable]))
+        return self.distance(Vector(*[0 for i in self]))
 
     def __str__(self):
-        return str("<{}>".format(str(self.iterable)[1:-1]))
+        return "<{}>".format(str([i for i in self])[1:-1])
 
     def __repr__(self):
         return self.__str__()
-
-    def __len__(self):
-        return len(self.iterable)
 
     def cross(self, other):
         return self.__matmul__(other)
