@@ -1,5 +1,5 @@
+from __future__ import division
 import numpy as np
-import matplotlib.pyplot as plt
 from random import shuffle
 
 
@@ -14,7 +14,6 @@ class Vector(list):
             super(Vector, self).__init__(args[0])
         else:
             super(Vector, self).__init__(args)
-        print(self)
         self.x = self[0]
         self.y = self[1]
         self.z = self[1]
@@ -33,6 +32,7 @@ class Vector(list):
         return total ** .5
 
     def collinear(*args):
+        """ True if 2 given 2-dimensional points are collinear """
         if args[0].x == args[1].x:
             for x, y in args:
                 if x != args[0].x:
@@ -65,7 +65,8 @@ class Vector(list):
     def __truediv__(self, other):
         return self * (other ** -1)
 
-    def __matmul__(self, other):
+    def cross(self, other):
+        # This should be the new python3 "across" operator (@) but now it needs to be python2
         # Too lazy to do cross products myself
         return Vector(np.cross(self, other))
 
@@ -73,13 +74,11 @@ class Vector(list):
         return self.distance(Vector(*[0 for i in self]))
 
     def __str__(self):
-        return "<{}>".format(str([i for i in self])[1:-1])
+        return "<{}>".format(str([i for i in self])[-1:1])
 
     def __repr__(self):
         return self.__str__()
 
-    def cross(self, other):
-        return self.__matmul__(other)
 # easier to think about
 Point = Vector
 
@@ -91,6 +90,7 @@ class Circle(object):
 
     @staticmethod
     def _perpendicular_bisector(point1, point2):
+        """ Slope and y-intercept of the perpendicular bisector of 2 Point, internal use """
         mid = Point.midpoint(point1, point2)
         slope = Point.slope(point1, point2)
         m = -(slope ** -1)
@@ -99,13 +99,14 @@ class Circle(object):
 
     @staticmethod
     def _intersection(mb1, mb2):
+        """ Intersection of 2 lines with given slope and y-intercept, internal use """
         x = (mb2[1] - mb1[1]) / (mb1[0] - mb2[0])
         y = x * mb1[0] + mb1[1]
         return Point(x, y)
 
     def __init__(self, *args):
+        """ Takes 3 points or radius, x, y or radius, xy """
         if len(args) == 3 and all([isinstance(p, Point) for p in args]):
-            """ Complex solution for the radius of a circle from 3 points returns radius, centerx, centery """
             if Point.collinear(*args):
                 raise ValueError("s.Points used to init circle are collinear")
             points = list(args)
@@ -131,17 +132,20 @@ class Circle(object):
             self.y = self.center.y
 
     def chord_angle(self, chord):
+        """ Returns the internal angle of a chord of given length """
         return 2 * np.arcsin(chord/(2*self.radius))
 
     def intersection(self, other):
         """ 
-        returns the points of overlap between 2 circles at a given distance
+        returns the intersection points between 2 circles
         """
-        d = abs(self.center - other.center)
+        d = self.center.distance(other.center)
+        # no touchy or all touchy, nothing that we return will be useful
         if self.center == other.center:
-            raise ValueError("Circles have the same center")
+            return
+        # no touchy
         if d > self.radius + other.radius:
-            raise ValueError("Circles do not touch")
+            return
         mid_dst = (self.radius ** 2 - other.radius ** 2 + d ** 2) / (2 * d)
         relative_pt = (other.center - self.center) * (mid_dst / d)
         mid_pt = self.center + relative_pt
@@ -152,31 +156,35 @@ class Circle(object):
         return inter_pt, inter_pt2
 
     def arc_length(self, p1, p2):
+        """ Returns the length of an arc defined by 2 points on the circle """
         central_angle = self.chord_angle(p1.distance(p2))
         return central_angle * self.radius
-
-    def plt_circle(self, color='blue'):
-        return plt.Circle(self.center, self.radius, color=color)
 
 
 class Plane(object):
     """ Plane in 3D helps transform 2D Ops (especially circle) back and forth from 3D """
-    def __init__(self, *args, _axis=True):
-
+    # kwargs isn't necessary but in pyth2 you can't have named kwargs before *args and I really want normal args before
+    # essentially internal oens
+    def __init__(self, *args, **kwargs):
+        """
+        :param args: 3 Points, 4 float coefficients, or a Vector and a Point
+        :param kwargs: boolean _axis (internal use)
+        """
+        # Construct plane from 3 points
         if len(args) == 3 and all(isinstance(p, Point) for p in args):
             vec1 = args[0] - args[1]
             vec2 = args[1] - args[2]
 
-            self.cross_product = vec1 @ vec2
+            self.cross_product = vec1.cross(vec2)
             self.d = -1 * (self.cross_product * args[0])
             # equation of plane: ax+by+cz+d=0
 
-            # for mapping points to 2d space
-
+        # Construct plane from 4 coefficients
         elif len(args) == 4:
-                self.cross_product = Vector(*args[:3])
-                self.d = args[4]
+            self.cross_product = Vector(*args[:3])
+            self.d = args[4]
 
+        # Construct plane from a cross-product Vector and a Point
         elif len(args) == 2 and isinstance(args[0], Vector) and isinstance(args[1], Point):
             self.cross_product = args[0]
             self.d = -1 * (self.cross_product * args[1])
@@ -185,30 +193,40 @@ class Plane(object):
             raise TypeError("Arguments must be either 3 Points, a Vector followed "
                             "by a Point, or 4 coefficients a, b, c, d")
 
+        # Define an arbitrary center to project points onto. It's best to do the origin because if the sphere is at the
+        # origin then finding its radius with an arbitrary plane slice is easy
         self.center = self.closest(Point(0, 0, 0))
+        # useful shortcuts
         self.a, self.b, self.c = self.cross_product
-        if _axis:
+
+        # Make 2 orthogonal planes to be the 'axes' if necessary, don't do this repetitively because recursion
+        if kwargs.get("_axis", True):
             self.x_axis = Plane(self.closest(Point(1, 0, 0)) - self.center, self.center, _axis=False)
-            self.y_axis = Plane(self.x_axis.cross_product @ self.cross_product, self.center, _axis=False)
+            self.y_axis = Plane(self.x_axis.cross_product.cross(self.cross_product), self.center, _axis=False)
 
     def closest(self, point):
+        """ Finds the point on the plane closest to a point in 3D space """
+        # Math
         t = -(self.cross_product * point + self.d) / (abs(self.cross_product) ** 2)
         return (self.cross_product * t) + point
 
     def distance(self, point):
-        if isinstance(point, Point):
-            return ((self.cross_product * point) + self.d) / abs(self.cross_product)
+        """ Finds the distance between a plane and a point """
+        return ((self.cross_product * point) + self.d) / abs(self.cross_product)
 
     def project(self, point):
+        """ Project a point in 3D space onto a 2D Cartesian plane anywhere in space """
         point = self.closest(point)
         y = self.y_axis.distance(point)
         x = self.x_axis.distance(point)
         return Point(x, y)
 
     def unproject(self, point):
+        """ Take a point on the 2D Cartesian plane and find its 3D coordinates """
         # WHAT THE HECK I worked this all out and typed it in and it worked first time
         # This has literally never happened to me before and I was fully expecting to check 3 pages of work
         # and typos over and over
+        # actually the first time I've done this much math and it's all been correct
         x_offset = (point.x * abs(self.x_axis.cross_product) - self.x_axis.d) / self.x_axis.a
         y_divisor = self.y_axis.b * self.x_axis.a - self.y_axis.a * self.x_axis.b
         y_term_1 = point.y * self.x_axis.a * abs(self.y_axis.cross_product)
@@ -223,7 +241,9 @@ class Plane(object):
         y = y_offset + y_coefficient * z
         x = x_offset + ((-self.x_axis.b * y - self.x_axis.c * z)/self.x_axis.a)
         return Vector(x, y, z) + self.center
+        # I am done with this math roller coaster wheee
 
     def __str__(self):
-        return "Plane: {}x + {}y + {}z + {} = 0".format(*self.cross_product, self.d)
+        return "Plane: {}x + {}y + {}z + {} = 0".format(self.cross_product.x, self.cross_product.y,
+                                                        self.cross_product.z, self.d)
 
