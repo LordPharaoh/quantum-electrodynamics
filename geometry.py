@@ -1,6 +1,7 @@
 from __future__ import division
 import numpy as np
 from random import shuffle
+from math import isnan
 
 
 class Vector(list):
@@ -16,7 +17,7 @@ class Vector(list):
             super(Vector, self).__init__(args)
         self.x = self[0]
         self.y = self[1]
-        self.z = self[1]
+        self.z = 0 if len(self) < 3 else self[2]
         self.a, self.b, self.c = self.x, self.y, self.z
 
     def slope(self, point):
@@ -74,7 +75,10 @@ class Vector(list):
         return self.distance(Vector(*[0 for i in self]))
 
     def __str__(self):
-        return "<{}>".format(str([i for i in self])[-1:1])
+        ret = "<"
+        for i in self:
+            ret += str(i) + ", "
+        return ret[:-2] + ">"
 
     def __repr__(self):
         return self.__str__()
@@ -142,10 +146,10 @@ class Circle(object):
         d = self.center.distance(other.center)
         # no touchy or all touchy, nothing that we return will be useful
         if self.center == other.center:
-            return
+            raise ValueError("No intersection point, centers are the same")
         # no touchy
         if d > self.radius + other.radius:
-            return
+            raise ValueError("No intersection point, radii are too small")
         mid_dst = (self.radius ** 2 - other.radius ** 2 + d ** 2) / (2 * d)
         relative_pt = (other.center - self.center) * (mid_dst / d)
         mid_pt = self.center + relative_pt
