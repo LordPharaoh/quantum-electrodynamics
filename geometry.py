@@ -1,7 +1,6 @@
 from __future__ import division
 import numpy as np
 from random import shuffle
-from math import isnan
 
 
 class Vector(list):
@@ -12,6 +11,7 @@ class Vector(list):
     """
     def __init__(self, *args):
         if len(args) == 1:
+            # If a list is passed in it will be nested (args = [[otherlist]]
             super(Vector, self).__init__(args[0])
         else:
             super(Vector, self).__init__(args)
@@ -33,7 +33,7 @@ class Vector(list):
         return total ** .5
 
     def collinear(*args):
-        """ True if 2 given 2-dimensional points are collinear """
+        """ True if any number of given 2-dimensional points are collinear """
         if args[0].x == args[1].x:
             for x, y in args:
                 if x != args[0].x:
@@ -41,7 +41,8 @@ class Vector(list):
         m = (args[0].y - args[1].y) / (args[0].x - args[1].x)
         b = args[0].y - (m * args[0].x)
         for x, y in args:
-            if round(y, 5) != round(m*x + b, 5):
+            # Round to avoid floating point errors
+            if round(y, 9) != round(m*x + b, 9):
                 return False
         return True
 
@@ -52,6 +53,7 @@ class Vector(list):
             return Vector(*[i + other for i in self])
 
     def __mul__(self, other):
+        """ Returns dot product if multiplied by a vector or a scalar product vector if multipled by a scalar"""
         if isinstance(other, Vector):
             total = 0
             for s, o in zip(self, other):
@@ -66,8 +68,11 @@ class Vector(list):
     def __truediv__(self, other):
         return self * (other ** -1)
 
+    def __matmul__(self, other):
+        return Vector(np.cross(self, other))
+
     def cross(self, other):
-        # This should be the new python3 "across" operator (@) but now it needs to be python2
+        # This should be the new python3 "across" operator (@) but just in case we need python2
         # Too lazy to do cross products myself
         return Vector(np.cross(self, other))
 
@@ -148,8 +153,6 @@ class Circle(object):
         if self.center == other.center:
             raise ValueError("No intersection point, centers are the same")
         # no touchy
-        if d > self.radius + other.radius:
-            raise ValueError("No intersection point, radii are too small")
         mid_dst = (self.radius ** 2 - other.radius ** 2 + d ** 2) / (2 * d)
         relative_pt = (other.center - self.center) * (mid_dst / d)
         mid_pt = self.center + relative_pt
@@ -157,6 +160,10 @@ class Circle(object):
         slope = chord_len / (2 * d)
         inter_pt = Point(mid_pt.x + slope * (other.y - self.y), mid_pt.y - slope * (other.x - self.x))
         inter_pt2 = Point(mid_pt.x - slope * (other.y - self.y), mid_pt.y + slope * (other.x - self.x))
+
+        if d > self.radius + other.radius:
+            raise ValueError("No intersection point, radii are too small")
+
         return inter_pt, inter_pt2
 
     def arc_length(self, p1, p2):
