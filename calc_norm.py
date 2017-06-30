@@ -18,7 +18,7 @@ def random_angle():
     return uniform(0, np.pi)
 
 
-def calc_norm(emitters, middles, detectors, sphere_radius, ref_index):
+def calc_norm(emitters, middles, detectors, sphere_radius, ref_index, display=False):
     """
     :param emitters: list of points of all x-ray emitters
     :param middles: list of points of all arc spots inside the sphere
@@ -31,6 +31,7 @@ def calc_norm(emitters, middles, detectors, sphere_radius, ref_index):
     # padding from top and bottom
     # delete '+ 2' to remove padding
     norms = []
+    intersections = []
     q_values = []
     # FIXME figure out what this is
     delta = 7.7018
@@ -41,11 +42,8 @@ def calc_norm(emitters, middles, detectors, sphere_radius, ref_index):
         for end in detectors:
             detector_sum = 0
             for middle in middles:
-                """
-                plane = Plane(start, middle, end)
 
-                msg.logMessage("")
-                msg.logMessage("S:{} M:{} E:{} PLANE:{}".format(start, middle, end, plane))
+                plane = Plane(start, middle, end)
 
                 assert abs(middle) < sphere_radius, \
                     "Middle point {} outside sphere of radius {}".format(middle, sphere_radius)
@@ -77,39 +75,34 @@ def calc_norm(emitters, middles, detectors, sphere_radius, ref_index):
                     print("Circles did not intersect?")
                     continue
 
-                msg.logMessage("INTER_PTS:{}".format(inter_pts))
                 e_pt, r_pt = (min(inter_pts, key=lambda x: x.distance(start_projection)),
                               max(inter_pts, key=lambda x: x.distance(start_projection)))
 
-                msg.logMessage("intersection1:{} intersection2:{}".format(e_pt, r_pt))
+                intersections.append(plane.unproject(e_pt))
+                intersections.append(plane.unproject(r_pt))
 
                 len1 = large.arc_length(start_projection, e_pt) * 1e9
                 len2 = large.arc_length(e_pt, r_pt) * 1e9
                 len3 = large.arc_length(r_pt, end_projection) * 1e9
-                """
-                randpt_1 = sph2cart(random_angle(), random_angle(), sphere_radius)
-                randpt_2 = sph2cart(random_angle(), random_angle(), sphere_radius)
-                randpt_1.x = - randpt_1.x
-                len1 = start.distance(randpt_1)
-                len2 = randpt_1.distance(randpt_2)
-                len3 = randpt_2.distance(end)
-                msg.logMessage("LEN1:{} LEN2:{} LEN3:{}".format(len1, len2, len3))
 
                 phase1 = np.angle(np.exp(2 * np.pi * delta * 1j * len1)) + delta * np.pi
                 phase2 = np.angle(np.exp(2 * np.pi * delta * ref_index * 1j * len2)) + phase1 + delta * np.pi
                 phase3 = np.angle(np.exp(2 * np.pi * delta * 1j * len3)) + phase2
-                msg.logMessage("PHASE1:{} PHASE2:{} PHASE3:{}".format(phase1, phase2, phase3))
 
                 wave = np.exp(phase3 * 1j)
 
                 detector_sum += wave.imag
 
                 # angle to detector from center of sphere
-            angle_to_detector = np.tan(float(end.z) / end.y) / 2
-            q = 4 * np.pi * np.sin(angle_to_detector) / wavelength
-            # imag = sum(map(lambda x: x.imag, detector_waves))
-            norms.append(np.log(detector_sum ** 2))
-            q_values.append(q)
+            if not display:
+                angle_to_detector = np.tan(float(end.z) / end.y) / 2
+                q = 4 * np.pi * np.sin(angle_to_detector) / wavelength
+                q_values.append(q)
 
-    return norms, q_values
+            norms.append(np.log(detector_sum ** 2))
+
+    if not display:
+        return norms, q_values
+    else:
+        return norms, intersections
 
