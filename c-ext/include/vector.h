@@ -2,7 +2,10 @@
 #define VECTOR_H
 #include <stdio.h>
 
+//what are the odds
+#define TERMINAL_VECTOR Vec3(1242646.23423, 1094756.304897, 3485289.4444444)
 #define V_STR_MAX 64
+
 typedef struct {
 	double x;
 	double y;
@@ -32,6 +35,8 @@ double v_dist(Vector, Vector);
 int v_collinear(Vector, Vector, Vector);
 
 Vector v_cross(Vector, Vector);
+
+int v_equal(Vector, Vector);
 
 void _v_string(char*, size_t, Vector);
 

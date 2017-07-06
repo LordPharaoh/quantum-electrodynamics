@@ -3,10 +3,13 @@
 #include "vector.h"
 #include "plane.h"
 #include "circle.h"
+#include "calc_norm.h"
 
 int main() {
-
-#define TEST_PLANE
+#ifdef TEST_CALC
+	double complex out = calc_norm(Vec3(0, -10, 0), Vec3(3, 0, 0), Vec3(0, 10, -3), 6, .5);
+	printf("%e + %ei\n", creal(out), cimag(out));
+#endif
 
 #ifdef TEST_PLANE
 	Plane p1 = p_from_points(Vec3(1, 3, 12), Vec3(2, 4, 8), Vec3(19, 27, 33));
