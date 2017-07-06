@@ -69,8 +69,12 @@ void calc_norm(Vector* emitters, size_t elen, Vector* middles, size_t mlen, Vect
 		double angle_to_detector = tan(detectors[d].z / detectors[d].y) / 2;
 		double q = 4 * M_PI * sin(angle_to_detector) / WAVELENGTH;
 		double norm = log(pow(cabs(detector_sum), 2));
-		qs[d] = q;
-		norms[d] = norm;
+		if(d < qlen)
+			qs[d] = q;
+		else fprintf(stderr, "BUFFER TO SMALL TO WRITE Q");
+		if(d < nlen)
+			norms[d] = norm;
+		else fprintf(stderr, "BUFFER TO SMALL TO WRITE NORM");
 	}
 }
 

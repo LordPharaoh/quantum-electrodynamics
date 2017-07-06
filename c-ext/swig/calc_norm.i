@@ -15,7 +15,7 @@
         int sizet = PyList_Size($input);
         $2 = PyList_Size($input);
         int i = 0;
-        $1 = (Vector*) malloc(sizeof(Vector*) * sizet);
+        $1 = (Vector*) malloc(sizeof(Vector) * sizet);
         for(i = 0; i < sizet; i++) {
             PyObject *o = PyList_GetItem($input, i);
             // Since Vector overrides class this might work
@@ -33,16 +33,15 @@
         int sizet = PyList_Size($input);
         $2 = PyList_Size($input);
 
-        $3 = (double*) malloc(sizeof(double*) * sizet);
+        $3 = (double*) malloc(sizeof(double) * sizet);
         $4 = sizet;
-        $5 = (double*) malloc(sizeof(double*) * sizet);
+        $5 = (double*) malloc(sizeof(double) * sizet);
         $6 = sizet;
-        $1 = (Vector*) malloc(sizeof(Vector*) * sizet + 1);
+        $1 = (Vector*) malloc(sizeof(Vector) * sizet);
 
         int i = 0;
         for(i = 0; i < sizet; i++) {
             PyObject *o = PyList_GetItem($input, i);
-            // Since Vector overrides class this might work
             $1[i] = Vec3(PyFloat_AsDouble(PyList_GetItem(o, 0)), PyFloat_AsDouble(PyList_GetItem(o, 1)), PyFloat_AsDouble(PyList_GetItem(o, 2)));
         }
     }
@@ -56,9 +55,9 @@
 }
 
 %typemap(freearg) (Vector* list_innout, size_t size_innout, double* qs, size_t qlen, double* norms, size_t nlen){
-    free((Vector*) $1);
-    free((double*) $3);
-    free((double*) $5);
+    free($1);
+    free($3);
+    free($5);
 }
 
 %typemap(argout) (double* qs, size_t qlen, double* norms, size_t nlen) {
@@ -71,8 +70,8 @@
         PyList_SetItem(norm, i, PyFloat_FromDouble($3[i]));
     }
     $result = PyTuple_New(2);
-    PyTuple_SetItem($result, 0, q);
-    PyTuple_SetItem($result, 1, norm);
+    PyTuple_SetItem($result, 1, q);
+    PyTuple_SetItem($result, 0, norm);
 }
 
 void calc_norm(Vector* list_in, size_t size_in, Vector* list_in, size_t size_in, Vector* list_innout, size_t size_innout, double* qs, size_t qlen, double* norms, size_t nlen, double sphere_radius, double ref_index);
