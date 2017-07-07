@@ -6,8 +6,11 @@
 #include "plane.h"
 #include "calc_norm.h"
 
-#define DELTA 7.7018
-#define WAVELENGTH .123989
+//#define DELTA 7.7018
+#define DELTA 1
+#define WAVELENGTH .123989e-9
+#define C_CONST 3e8
+#define FREQUENCY (C_CONST / WAVELENGTH)
 
 void calc_norm(Vector* emitters, size_t elen, Vector* middles, size_t mlen, Vector* detectors, size_t dlen, double* qs, size_t qlen, double* norms, size_t nlen, double sphere_radius, double ref_index) {
 
@@ -26,7 +29,7 @@ void calc_norm(Vector* emitters, size_t elen, Vector* middles, size_t mlen, Vect
 				// This should be done somewhere else
 				if (v_collinear(e_proj, m_proj, d_proj)) {
 					raise_error(INVALID_ARGUMENT, "Points are collinear");
-					return;
+					continue;
 				}
 
 				Circle large = c_from_points(e_proj, m_proj, d_proj);
@@ -41,7 +44,7 @@ void calc_norm(Vector* emitters, size_t elen, Vector* middles, size_t mlen, Vect
 				c_intersection(small, large, inter_pts);
 				if(check_exception() != CLEAR) {
 					raise_error(INVALID_ARGUMENT, "Circles did not intersect?");
-					return;
+					continue;
 				}
 
 				double dists[2];
@@ -53,16 +56,13 @@ void calc_norm(Vector* emitters, size_t elen, Vector* middles, size_t mlen, Vect
 				//further pt
 				Vector r_pt = (dists[0] > dists[1]) ? inter_pts[0] : inter_pts[1];
 
-				double complex l1 = c_arc_length(large, e_proj, e_pt) * 1e9 + 0 * I;
-				double complex l2 = c_arc_length(large, e_pt, r_pt) * 1e9 + 0 * I;
-				double complex l3 = c_arc_length(large, r_pt, d_proj) * 1e9 + 0 * I;
+				double l1 = c_arc_length(large, e_proj, e_pt) * 1e9;
+				double l2 = c_arc_length(large, e_pt, r_pt) * 1e9;
+				double l3 = c_arc_length(large, r_pt, d_proj) * 1e9;
 
-				double phase1 = carg(cexp(2 * M_PI * DELTA *  I * l1)) + DELTA * M_PI;
-				double phase2 = carg(cexp(2 * M_PI * DELTA * ref_index * I * l2)) + DELTA * M_PI + phase1;
-				double phase3 = carg(cexp(2 * M_PI * DELTA * I * l3)) + phase2;
+				double time = C_CONST / (l1 + l2 * ref_index + l3);
 
-				double complex wave = cexp(phase3 * I);
-
+				double complex wave = cos(2 * M_PI * time / FREQUENCY) + I * sin(2 * M_PI * time / FREQUENCY);
 				detector_sum += wave;
 			}
 		}
