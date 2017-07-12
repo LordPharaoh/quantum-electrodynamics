@@ -3,7 +3,7 @@ from xicam.plugins import base
 from PySide import QtCore, QtGui
 from Main3DView import Main3DView
 from form_graph import FormGraph
-from form_image import FormImage
+#from form_image import FormImage
 
 
 class QEDPlugin(base.plugin):

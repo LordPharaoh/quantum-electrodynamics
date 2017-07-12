@@ -9,7 +9,7 @@ SOURCES = $(shell find $(SRC) -name '*.c')
 
 SWIG_CFLAGS = -c -fPIC
 
-all: binary vector circle calc_norm
+all: binary vector circle sphere sphere calc_norm
 
 binary:
 	$(CC) $(INCLUDE) $(PYTHON) $(SOURCES) -o vecout -lm
@@ -30,11 +30,18 @@ circle:
 	mv *.o build
 	gcc -shared build/*.o -o _circle.so
 
+sphere:
+	$(SWIG) -python $(SWIG_DIR)/sphere.i
+	mv $(SWIG_DIR)/sphere_wrap.c $(BUILD)
+	$(CC) $(SWIG_CFLAGS) $(INCLUDE) $(PYTHON) $(BUILD)/sphere_wrap.c $(SRC)/plane.c $(SRC)/circle.c $(SRC)/sphere.c $(SRC)/except.c $(SRC)/vector.c 
+	mv *.o build
+	gcc -shared build/*.o -o _sphere.so
+
 calc_norm:
 	$(SWIG) -python $(SWIG_DIR)/calc_norm.i
 	mv $(SWIG_DIR)/calc_norm_wrap.c $(BUILD)
 	mv $(SWIG_DIR)/calc_norm.py .
-	$(CC) $(SWIG_CFLAGS) $(INCLUDE) $(PYTHON) $(BUILD)/calc_norm_wrap.c $(SRC)/plane.c $(SRC)/circle.c $(SRC)/calc_norm.c $(SRC)/except.c $(SRC)/vector.c 
+	$(CC) $(SWIG_CFLAGS) $(INCLUDE) $(PYTHON) $(BUILD)/calc_norm_wrap.c $(SRC)/plane.c $(SRC)/circle.c $(SRC)/calc_norm.c $(SRC)/except.c $(SRC)/vector.c $(SRC)/sphere.c
 	mv *.o build
 	gcc -shared build/*.o -o _calc_norm.so
 

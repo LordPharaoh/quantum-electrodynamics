@@ -15,34 +15,10 @@ class FormGraph(pg.PlotWidget):
         self.sphere_radius = radius
 
         # initialize emitters
-        if emitters is None:
-            self.emitters = [Point(0, -16, 0)]
-        else:
-            self.emitters = emitters
-        if middles is None:
-            r = radius * .9
-            mid_space = radius * 1.2
-            npt = 900
-            step = radius / npt
-            self.middles = []
-
-            for i in range(npt):
-                self.middles.append(Point(0, 1E-20, mid_space + r - (i * step)))
-                self.middles.append(Point(0, 1E-20, -mid_space - (i * step)))
-
-            # self.middles = [Point(-r + ((2 * r / npt) * i), 1E-20, -r + ((2 * r / npt) * i)) for i in range(npt)]
-        else:
-            self.middles = middles
-        if detectors is None:
-            self.detectors = [Point(0,  4, i*5E-4) for i in range(2500)]
-        else:
-            self.detectors = detectors
-
         self.spi = pg.ScatterPlotItem()
         self.addItem(self.spi)
 
-        self.probability_density, self.qz_values, self.qx_values = calc_norm(self.emitters, self.middles, self.detectors,
-                                                                             self.sphere_radius, self.index_refraction)
+        self.probability_density, self.qz_values, self.qx_values = calc_norm((2E-8, 2E-8), (200, 200), (0, 1), (1, 2000), [[[0, 0, 0], radius, index_refraction]]);
 
         self.spi.addPoints(self.qz_values, self.probability_density, pen='r')
 
@@ -71,5 +47,3 @@ class FormGraph(pg.PlotWidget):
         self.q_values.append(q_values)
         self.spi.addPoints(self.q_values, self.probability_density)
         msg.logMessage("added a point")
-
-

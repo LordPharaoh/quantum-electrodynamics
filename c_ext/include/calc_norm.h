@@ -1,5 +1,6 @@
 #ifndef CALC_NORM_H
 #define CALC_NORM_H
 #include <complex.h>
-void calc_norm(Vector* emitter, size_t elen, Vector* middle, size_t mlen, Vector* detector, size_t dlen, double* qzs, size_t qzlen, double* qxs, size_t qxlen, double* norms, size_t nlen, double sphere_radius, double ref_index);
+#include "sphere.h"
+void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, int num_middles_y, double detector_grid_x, double detector_grid_y, int num_detectors_x, int num_detectors_y, double* qzs, size_t qzlen, double* qxs, size_t qxlen, double* norms, size_t nlen, Sphere* spheres, size_t spherelen);
 #endif 
