@@ -3,6 +3,7 @@ from xicam.plugins import base
 from PySide import QtCore, QtGui
 from Main3DView import Main3DView
 from form_graph import FormGraph
+from form_image import FormImage
 
 
 class QEDPlugin(base.plugin):
@@ -14,9 +15,10 @@ class QEDPlugin(base.plugin):
         self.rightwidget = None
         self.bottomwidget = None
         self.toolbbar = None
-        #self.main_view = Main3DView()
-        self.form_graph = FormGraph()
+        # self.main_view = Main3DView()
+        # self.form_graph = FormGraph()
         # self.centerwidget.addWidget(self.main_view)
+        self.form_graph = FormGraph()
         self.centerwidget.addWidget(self.form_graph)
         super(QEDPlugin, self).__init__(*args, **kwargs)
 

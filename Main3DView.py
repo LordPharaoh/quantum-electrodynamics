@@ -1,6 +1,6 @@
 from __future__ import division
 import pyqtgraph.opengl as gl
-from calc_norm import calc_norm
+from c_ext.calc_norm import calc_norm
 from random import uniform
 from geometry import Point
 from glitems import Arc, Sphere, Scatter

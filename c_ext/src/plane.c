@@ -18,7 +18,7 @@ Plane wrap_axis(Axis a) {
 }
 
 
-Plane p_new(Vector cp, double d) {
+Plane p_new(Vector cp, long double d) {
 	Plane p;
 	p.cross_product = cp;
 	p.d = d;
@@ -31,7 +31,7 @@ Plane p_new(Vector cp, double d) {
 
 Axis p_from_cp_cent_noaxes(Vector cp, Vector point) {
 
-	double d = -1.0 * (v_dot(cp, point));
+	long double d = -1.0 * (v_dot(cp, point));
 	Axis p;
 	p.cross_product = cp;
 	p.d = d;
@@ -55,7 +55,7 @@ Axis y_axis(Plane p) {
 
 
 Plane p_from_cp_cent(Vector cp, Vector point) {
-	double d = -1.0 * (v_dot(cp, point));
+	long double d = -1.0 * (v_dot(cp, point));
 	return p_new(cp, d);
 }
 
@@ -63,30 +63,33 @@ Plane p_from_cp_cent(Vector cp, Vector point) {
 Plane p_from_points(Vector v1, Vector v2, Vector v3) {
 	Vector vs1 = v_sub(v1, v2);
 	Vector vs2 = v_sub(v2, v3);
-	return p_from_cp_cent(v_cross(vs1, vs2), v1);
+	Vector cross = v_cross(vs1, vs2);
+	long double scalar = sqrt(pow(cross.x, 2) + pow(cross.y, 2) + pow(cross.z, 2));
+	cross = v_mult(cross, scalar);
+	return p_from_cp_cent(cross, v1);
 }
 
 
 Vector p_closest(Plane p, Vector point) {
-	double t = - p_dist(p, point) / v_norm(p.cross_product);
+	long double t = - p_dist(p, point) / v_norm(p.cross_product);
 	return v_add(v_mult(p.cross_product, t), point);
 }
 	
 
-double p_evaluate(Plane p, Vector v) {
+long double p_evaluate(Plane p, Vector v) {
 	return v_dot(p.cross_product, v) + p.d;
 }
 
 
-double p_dist(Plane p, Vector point) {
+long double p_dist(Plane p, Vector point) {
 	return p_evaluate(p, point) / v_norm(p.cross_product);
 }
 	
 
 Vector p_project(Plane p, Vector point) {
 	Vector pt_on_plane = p_closest(p, point);
-	double y = p_dist(wrap_axis(p.y_axis), pt_on_plane);
-	double x = p_dist(wrap_axis(p.x_axis), pt_on_plane);
+	long double y = p_dist(wrap_axis(p.y_axis), pt_on_plane);
+	long double x = p_dist(wrap_axis(p.x_axis), pt_on_plane);
 	return Vec2(x, y);
 }
 
@@ -100,31 +103,31 @@ Vector p_unproject(Plane p, Vector point) {
 	Plane xax = wrap_axis(p.x_axis);
 	Plane yax = wrap_axis(p.y_axis);
 	
-	double x_offset = (point.x * v_norm(xax.cross_product) - xax.d) / xax.cross_product.x;
+	long double x_offset = (point.x * v_norm(xax.cross_product) - xax.d) / xax.cross_product.x;
 
-	double y_divisor =  yax.cross_product.y * xax.cross_product.x 
+	long double y_divisor =  yax.cross_product.y * xax.cross_product.x 
 					  - yax.cross_product.x * xax.cross_product.y;
 
-	double y_term_1 = point.y * xax.cross_product.x * v_norm(yax.cross_product);
-	double y_term_2 = yax.d * xax.cross_product.x;
-	double y_term_3 = yax.cross_product.x * xax.cross_product.x * x_offset;
+	long double y_term_1 = point.y * xax.cross_product.x * v_norm(yax.cross_product);
+	long double y_term_2 = yax.d * xax.cross_product.x;
+	long double y_term_3 = yax.cross_product.x * xax.cross_product.x * x_offset;
 
-	double y_offset = (y_term_1 - y_term_2 - y_term_3) / y_divisor;
-	double y_coefficient = (yax.cross_product.x * xax.cross_product.z 
+	long double y_offset = (y_term_1 - y_term_2 - y_term_3) / y_divisor;
+	long double y_coefficient = (yax.cross_product.x * xax.cross_product.z 
 	                      - xax.cross_product.x * yax.cross_product.z) 
 						  / y_divisor;
 
-	double z_offset = - p.cross_product.x * x_offset 
+	long double z_offset = - p.cross_product.x * x_offset 
 					  + ((p.cross_product.x * xax.cross_product.y * y_offset) / xax.cross_product.x) 
 					  - p.cross_product.y * y_offset;
-	double z_divisor = - ((p.cross_product.x * xax.cross_product.y * y_coefficient) / xax.cross_product.x)
+	long double z_divisor = - ((p.cross_product.x * xax.cross_product.y * y_coefficient) / xax.cross_product.x)
 					   - ((p.cross_product.x * xax.cross_product.z) / xax.cross_product.x)
 					   + p.cross_product.y * y_coefficient
 					   + p.cross_product.z;
 
-	double z = z_offset / z_divisor;
-	double y = y_offset + y_coefficient * z;
-	double x = x_offset + ((-xax.cross_product.y * y - xax.cross_product.z * z) 
+	long double z = z_offset / z_divisor;
+	long double y = y_offset + y_coefficient * z;
+	long double x = x_offset + ((-xax.cross_product.y * y - xax.cross_product.z * z) 
 						   / xax.cross_product.x);
 
 	return v_add(Vec3(x, y, z), p.center);
@@ -132,5 +135,5 @@ Vector p_unproject(Plane p, Vector point) {
 
 
 void _p_string(char* c, size_t n, Plane p) {
-	snprintf(c, n, "%ex + %ey + %ec + %e = 0", p.cross_product.x, p.cross_product.y, p.cross_product.z, p.d);
+	snprintf(c, n, "%Lfx + %Lfy + %Lfc + %Lf = 0", p.cross_product.x, p.cross_product.y, p.cross_product.z, p.d);
 }

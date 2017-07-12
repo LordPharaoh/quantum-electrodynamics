@@ -8,24 +8,30 @@
 
 typedef struct {
 	Vector center;
-	double radius;
+	long double radius;
 } Circle;
 
 Circle c_from_points(Vector, Vector, Vector);
 
+Circle c_new(Vector, long double);
+
 void _c_string(char*, size_t, Circle);
 
-double c_chord_angle(Circle, double);
+long double c_chord_angle(Circle, long double);
 
-Circle c_new(Vector, double);
+Circle c_new(Vector, long double);
 
 void c_intersection(Circle, Circle, Vector*);
 
-double c_arc_length(Circle, Vector, Vector);
+long double c_arc_length(Circle, Vector, Vector);
+
+Vector c_v_intersection(Circle, Vector, Vector);
+
+long double c_evaluate(Circle, Vector);
 
 #ifdef C_TEST
-void v_perp_bisect(Vector, Vector, double*);
-Vector l_intersection(double*, double*);
+void v_perp_bisect(Vector, Vector, long double*);
+Vector l_intersection(long double*, long double*);
 #endif
 
 #endif

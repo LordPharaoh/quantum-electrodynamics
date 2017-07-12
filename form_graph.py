@@ -1,14 +1,14 @@
 import pyqtgraph as pg
 from random import uniform
 from geometry import Point
-from calc_norm import calc_norm
+from c_ext.calc_norm import calc_norm
 from pipeline import msg
 from xicam import threads
 
 
 class FormGraph(pg.PlotWidget):
 
-    def __init__(self, emitters=None, middles=None, detectors=None, radius=2E-8, index_refraction=1 + 2.67150153E-6):
+    def __init__(self, emitters=None, middles=None, detectors=None, radius=2E-8, index_refraction= 1 - 2.67150153E-3):
         super(FormGraph, self).__init__(title="Form Factor of Sphere with Curved Paths",
                                         bottom="Q Value", left="Probability Density")
         self.index_refraction = index_refraction
@@ -20,22 +20,38 @@ class FormGraph(pg.PlotWidget):
         else:
             self.emitters = emitters
         if middles is None:
-            self.middles = [Point(-1E-20, 0, uniform(-1.4E-8, 1.4E-8)) for i in range(10)]
+            r = radius * .9
+            mid_space = radius * 1.2
+            npt = 900
+            step = radius / npt
+            self.middles = []
+
+            for i in range(npt):
+                self.middles.append(Point(0, 1E-20, mid_space + r - (i * step)))
+                self.middles.append(Point(0, 1E-20, -mid_space - (i * step)))
+
+            # self.middles = [Point(-r + ((2 * r / npt) * i), 1E-20, -r + ((2 * r / npt) * i)) for i in range(npt)]
         else:
             self.middles = middles
         if detectors is None:
-            # self.detectors = [Point(uniform(-4, 4), 10, uniform(-4, 4)) for i in range(10)]
-            self.detectors = sorted([Point(0,  4, i*1E-8) for i in range(10)], key=lambda x: x.z)
+            self.detectors = [Point(0,  4, i*5E-4) for i in range(2500)]
         else:
             self.detectors = detectors
 
         self.spi = pg.ScatterPlotItem()
         self.addItem(self.spi)
 
-        self.probability_density = []
-        self.q_values = []
+        self.probability_density, self.qz_values, self.qx_values = calc_norm(self.emitters, self.middles, self.detectors,
+                                                                             self.sphere_radius, self.index_refraction)
 
-        self.rit = threads.RunnableIterator(self.iter_calc, callback_slot=self.plot)
+        self.spi.addPoints(self.qz_values, self.probability_density, pen='r')
+
+        """
+        self.probability_density, self.qz_values, self.qx_values = calc_norm(self.emitters, self.middles, self.detectors,
+                                                                             self.sphere_radius, 1)
+        self.spi.addPoints(self.qz_values, self.probability_density, pen='b')
+        """
+        # self.rit = threads.RunnableIterator(self.iter_calc, callback_slot=self.plot)
 
 
     def calc(self):

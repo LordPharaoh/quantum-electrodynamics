@@ -13,7 +13,9 @@ class Vector(list):
         if len(args) == 1:
             # If a list is passed in it will be nested (args = [[otherlist]]
             super(Vector, self).__init__(args[0])
+            self.order = len(args[0]) - 1
         else:
+            self.order = len(args) - 1
             super(Vector, self).__init__(args)
         self.x = self[0]
         self.y = self[1]
@@ -24,7 +26,7 @@ class Vector(list):
         return (self.y - point.y) / (self.x - point.x)
 
     def midpoint(self, point):
-        return Vector((self.x + point.x) * .5, (self.y + point.y) * .5)
+        return Vector((self.x + point.x) * .5, (self.y + point.y) * .5, (self.z + point.z) * .5)
 
     def distance(self, p2):
         total = 0
@@ -34,17 +36,14 @@ class Vector(list):
 
     def collinear(*args):
         """ True if any number of given 2-dimensional points are collinear """
-        if args[0].x == args[1].x:
-            for x, y in args:
-                if x != args[0].x:
-                    return False
-        m = (args[0].y - args[1].y) / (args[0].x - args[1].x)
-        b = args[0].y - (m * args[0].x)
-        for x, y in args:
-            # Round to avoid floating point errors
-            if round(y, 9) != round(m*x + b, 9):
+        slope = args[0].slope(args[1])
+        for i in args[2:]:
+            if args[0].slope(i) != slope:
                 return False
         return True
+
+    def complex(self):
+        return self.x + self.y * 1j
 
     def __add__(self, other):
         if isinstance(other, Vector):
@@ -87,6 +86,7 @@ class Vector(list):
 
     def __repr__(self):
         return self.__str__()
+
 
 # easier to think about
 Point = Vector
@@ -170,6 +170,24 @@ class Circle(object):
         """ Returns the length of an arc defined by 2 points on the circle """
         central_angle = self.chord_angle(p1.distance(p2))
         return central_angle * self.radius
+
+    def filled_midpoint(self):
+        """ Returns a list of points to create a pixelated filled-midpoint circle """
+        range_ = int(self.radius / np.sqrt(2))
+        points = []
+        for i in range(self.radius, range_ - 1, -1):
+            j = int(np.sqrt(self.radius ** 2 - i ** 2))
+            for k in range(-j, j + 1):  
+                points.append(Point(self.x - k, self.y + i))
+                points.append(Point(self.x - k, self.y - i))
+                points.append(Point(self.x + k, self.y - i))
+                points.append(Point(self.x + k, self.y + i))
+        range_ = int(self.radius * np.sin(np.pi / 4))
+        for i in range(self.x - range_ + 1, self.x + range_):
+            for j in range(self.y - range_ + 1, self.y + range_):
+                points.append(Point(i, j))
+        
+        return points
 
 
 class Plane(object):

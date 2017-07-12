@@ -9,7 +9,7 @@ SOURCES = $(shell find $(SRC) -name '*.c')
 
 SWIG_CFLAGS = -c -fPIC
 
-all: binary
+all: binary vector circle calc_norm
 
 binary:
 	$(CC) $(INCLUDE) $(PYTHON) $(SOURCES) -o vecout -lm

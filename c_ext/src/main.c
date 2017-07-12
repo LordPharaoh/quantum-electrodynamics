@@ -7,8 +7,8 @@
 
 int main() {
 #ifdef TEST_CALC
-	double complex out = calc_norm(Vec3(0, -10, 0), Vec3(3, 0, 0), Vec3(0, 10, -3), 6, .5);
-	printf("%e + %ei\n", creal(out), cimag(out));
+	long double complex out = calc_norm(Vec3(0, -10, 0), Vec3(3, 0, 0), Vec3(0, 10, -3), 6, .5);
+	printf("%Lf + %Lfi\n", creal(out), cimag(out));
 #endif
 
 #ifdef TEST_PLANE

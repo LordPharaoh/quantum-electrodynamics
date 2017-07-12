@@ -27,7 +27,7 @@
     }
 }
 
-%typemap(in) (Vector* list_innout, size_t size_innout, double* qs, size_t qlen, double* norms, size_t nlen) {
+%typemap(in) (Vector* list_innout, size_t size_innout, double* qzs, size_t qzlen, double* qxs, size_t qxlen, double* norms, size_t nlen) {
     if (PyList_Check($input)) {
 
         int sizet = PyList_Size($input);
@@ -37,6 +37,8 @@
         $4 = sizet;
         $5 = (double*) malloc(sizeof(double) * sizet);
         $6 = sizet;
+        $7 = (double*) malloc(sizeof(double) * sizet);
+        $8 = sizet;
         $1 = (Vector*) malloc(sizeof(Vector) * sizet);
 
         int i = 0;
@@ -58,21 +60,25 @@
     free($1);
     free($3);
     free($5);
+    free($7);
 }
 
-%typemap(argout) (double* qs, size_t qlen, double* norms, size_t nlen) {
+%typemap(argout) (double* qzs, size_t qzlen, double* qxs, size_t qxlen, double* norms, size_t nlen) {
 
-    PyObject* q = PyList_New($2);
-    PyObject* norm = PyList_New($4);
+    PyObject* qz = PyList_New($2);
+    PyObject* qx = PyList_New($4);
+    PyObject* norms = PyList_New($6);
 
     for(int i = 0; i < $2; i++) {
-        PyList_SetItem(q, i, PyFloat_FromDouble($1[i]));
-        PyList_SetItem(norm, i, PyFloat_FromDouble($3[i]));
+        PyList_SetItem(qz, i, PyFloat_FromDouble($1[i]));
+        PyList_SetItem(qx, i, PyFloat_FromDouble($3[i]));
+        PyList_SetItem(norms, i, PyFloat_FromDouble($5[i]));
     }
-    $result = PyTuple_New(2);
-    PyTuple_SetItem($result, 1, q);
-    PyTuple_SetItem($result, 0, norm);
+    $result = PyTuple_New(3);
+    PyTuple_SetItem($result, 0, norms);
+    PyTuple_SetItem($result, 1, qz);
+    PyTuple_SetItem($result, 2, qx);
 }
 
-void calc_norm(Vector* list_in, size_t size_in, Vector* list_in, size_t size_in, Vector* list_innout, size_t size_innout, double* qs, size_t qlen, double* norms, size_t nlen, double sphere_radius, double ref_index);
+void calc_norm(Vector* list_in, size_t size_in, Vector* list_in, size_t size_in, Vector* list_innout, size_t size_innout, double* qzs, size_t qzlen, double* qxs, size_t qxlen, double* norms, size_t nlen, double sphere_radius, double ref_index);
 

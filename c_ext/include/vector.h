@@ -7,32 +7,32 @@
 #define V_STR_MAX 64
 
 typedef struct {
-	double x;
-	double y;
-	double z;
+	long double x;
+	long double y;
+	long double z;
 } Vector;
 
-Vector Vec3(double, double, double);
+Vector Vec3(long double, long double, long double);
 
-Vector Vec2(double, double);
+Vector Vec2(long double, long double);
 
 Vector v_sub(Vector, Vector);
 
 Vector v_add(Vector, Vector);
 
-double v_dot(Vector, Vector);
+long double v_dot(Vector, Vector);
 
-Vector v_mult(Vector, double);
+Vector v_mult(Vector, long double);
 
-double v_norm(Vector);
+long double v_norm(Vector);
 
-double v_slope(Vector, Vector);
+long double v_slope(Vector, Vector);
 
 Vector v_mid(Vector, Vector);
 
-double v_dist(Vector, Vector);
+long double v_dist(Vector, Vector);
 
-int v_collinear(Vector, Vector, Vector);
+long double v_collinear(Vector, Vector, Vector);
 
 Vector v_cross(Vector, Vector);
 
