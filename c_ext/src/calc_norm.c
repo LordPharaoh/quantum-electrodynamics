@@ -9,7 +9,7 @@
 #include "calc_norm.h"
 
 #define DELTA 7.7018
-#define WAVELENGTH 1.23984
+#define WAVELENGTH .123984
 #define C_CONST 3e8 
 #define FREQUENCY 2.41966e18 
 #define PLANCK_CONSTANT 6.62606993e-34
@@ -22,7 +22,7 @@
 
 #define ARCS 0
 #define INTERSECTIONS 0
-#define BLOCKING 0
+#define UNBLOCKING 1
 #define FEYNMAN 0
 
 
@@ -91,12 +91,16 @@ void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, in
 			time = c_arc_length(large, e_proj, d_proj) / C_CONST;
 
 			#else /* ARCS*/
-			#if BLOCKING
-			if(v_dist(middle, spheres[0].center) < spheres[0].radius) {
-
-				continue;
+			#if UNBLOCKING
+			int in_sphere = 0;
+			for(int s = 0; s < spherelen; s++) {
+				if(v_dist(middle, spheres[s].center) < spheres[s].radius) {
+					in_sphere = 1;
+					break;
+				}
 			}
-			#endif /* BLOCKING */
+			if(!in_sphere) continue;
+			#endif /* UNBLOCKING */
 
 			long double l1 = v_dist(EMITTER, middle);
 			long double l2 = v_dist(middle, detector);
@@ -160,11 +164,16 @@ void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, in
 			detector_sum += wave;
 			#else /* FEYNMAN! */
 
-			#if BLOCKING
-			if(v_dist(middle, spheres[0].center) < spheres[0].radius) {
-				continue;
+			#if UNBLOCKING
+			int in_sphere = 0;
+			for(int s = 0; s < spherelen; s++) {
+				if(v_dist(middle, spheres[s].center) < spheres[s].radius) {
+					in_sphere = 1;
+					break;
+				}
 			}
-			#endif /* BLOCKING */
+			if(!in_sphere) continue;
+			#endif /* UNBLOCKING */
 			Vector unit = v_mult(middle, 1 / v_norm(middle));
 			Vector momentum = Vec3(0, MOMENTUM, 0); // v_mult(unit, MOMENTUM);
 
