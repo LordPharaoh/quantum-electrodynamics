@@ -9,19 +9,30 @@
 #include "calc_norm.h"
 
 #define DELTA 7.7018
-#define WAVELENGTH .123984
-#define C_CONST 3e8
-#define FREQUENCY 2.41966e18
+#define WAVELENGTH 1.23984
+#define C_CONST 3e8 
+#define FREQUENCY 2.41966e18 
+#define PLANCK_CONSTANT 6.62606993e-34
+#define REDUCED_PLANCK_CONSTANT 1.054571800e-34
+#define MOMENTUM 5.344294457349335e-24
 
 #define EMITTER ((Vector) {0, -16, 0})
 #define MIDDLE_Y 1E-20
 #define DETECTOR_Y 4
 
 #define ARCS 0
-#define INTERSECTIONS 1
+#define INTERSECTIONS 0
+#define BLOCKING 0
+#define FEYNMAN 0
+
+
+long double q2cart(long double q) {
+	return atan(2 * asin(q * WAVELENGTH / (4 * M_PI))) * DETECTOR_Y;
+}
+
 
 void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, int num_middles_y,
-			   double detector_grid_x, double detector_grid_y, int num_detectors_x, int num_detectors_y, 
+			   double qx_range, double qy_range, int num_detectors_x, int num_detectors_y, 
 		       double* qzs, size_t qzlen, double* qxs, size_t qxlen, double* norms, 
 			   size_t nlen, Sphere* spheres, size_t spherelen) {
 
@@ -29,39 +40,46 @@ void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, in
 	double xm_step = ((double) middle_grid_x) / num_middles_x;
 	double ym_step = ((double) middle_grid_y) / num_middles_y;
 
-	double xd_step = ((double) detector_grid_x) / num_detectors_x;
-	double yd_step = ((double) detector_grid_y) / num_middles_y;
+	double qxd_step = ((double) qx_range) / num_detectors_x;
+	double qyd_step = ((double) qy_range) / num_middles_y;
 
 	long double det_x = 0;
 	long double det_z = 0;
 
 	for(int d = 0; d < num_detectors_x * num_detectors_y; d++) {
 
+		#if FEYNMAN
 		long double complex detector_sum = 0;
+		#else
+		long double complex detector_sum = 0;
+		#endif /* FEYNMAN */
 
 		/* generate detector point */
-		Vector detector = Vec3(det_x, DETECTOR_Y, det_z);
-		det_z += yd_step;
-		if(det_z >= detector_grid_y) {
+		Vector detector = Vec3(q2cart(det_x), DETECTOR_Y, q2cart(det_z));
+		det_z += qyd_step;
+		if(det_z >= qy_range) {
+
 			det_z = 0;
-			det_x += xd_step;
+			det_x += qxd_step;
 		}
 
-		long double mid_x = 0;
-		long double mid_z = 0;
+		long double mid_x = -middle_grid_x * .5;
+		long double mid_z = -middle_grid_y * .5;
 
 		for(int m = 0; m < num_middles_x * num_middles_y; m++) {
 
 			/* Generate middle point */
-			Vector middle = Vec3(mid_z, MIDDLE_Y, mid_z);
+			Vector middle = Vec3(mid_x, MIDDLE_Y, mid_z);
 			mid_z += ym_step;
 			if(mid_z >= middle_grid_y) {
 				mid_z = 0;
 				mid_x += xm_step;
 			}
 
+			#if !FEYNMAN
+
 			long double time;	
-			
+
 			#if ARCS
 
 			// calculate straight time from point to another over hte path of a big circle
@@ -73,11 +91,16 @@ void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, in
 			time = c_arc_length(large, e_proj, d_proj) / C_CONST;
 
 			#else /* ARCS*/
+			#if BLOCKING
+			if(v_dist(middle, spheres[0].center) < spheres[0].radius) {
+
+				continue;
+			}
+			#endif /* BLOCKING */
 
 			long double l1 = v_dist(EMITTER, middle);
 			long double l2 = v_dist(middle, detector);
 			time = (l1 + l2) / C_CONST;
-
 			#endif /* ARCS */
 
 
@@ -92,11 +115,11 @@ void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, in
 
 			#if INTERSECTIONS
 			/* Loop through spheres */	
+			int insphere = 0;
 			for(int s = 0; s < spherelen; s++) {
 
 				Sphere sphere = spheres[s];
 				Circle slice = s_slice(sphere, cart);
-				//keep going if the slice doesn't cross
 				if(slice.radius != -1) continue;
 
 				#if ARCS /* 2 */
@@ -130,28 +153,40 @@ void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, in
 			#elif defined(INFINITY)
 			if(isinf(time)) {
 				continue;
-				printf("Threw out nan\n");
+				printf("Threw out infinity\n");
 			}
 			#endif /* INFINITY */
 			long double complex wave = cexp(time * FREQUENCY * I);
 			detector_sum += wave;
+			#else /* FEYNMAN! */
+
+			#if BLOCKING
+			if(v_dist(middle, spheres[0].center) < spheres[0].radius) {
+				continue;
+			}
+			#endif /* BLOCKING */
+			Vector unit = v_mult(middle, 1 / v_norm(middle));
+			Vector momentum = Vec3(0, MOMENTUM, 0); // v_mult(unit, MOMENTUM);
+
+			Vector dist = v_sub(EMITTER, detector);
+			detector_sum += cexp(I * v_dot(dist, momentum) / REDUCED_PLANCK_CONSTANT) / v_norm(dist);
+
+			#endif /* !FEYNMAN */
 		}
-		long double z = tan(detector.z / detector.y) / 2;
-		long double x = tan(detector.x / detector.y) / 2;
-		double qz = (double) (4 * M_PI * sin(z) / WAVELENGTH);
-		double qx = (double) (4 * M_PI * sin(x) / WAVELENGTH);
 		double norm = (double) (log(pow(cabs(detector_sum), 2)));
-		printf("NORM: %.17e\n", norm);
 		if(d < qzlen)
-			qzs[d] = qz;
+			qzs[d] = det_z;
 		else fprintf(stderr, "BUFFER TO SMALL TO WRITE QZ");
 		if(d < qxlen)
-			qxs[d] = qx;
+			qxs[d] = det_x;
 		else fprintf(stderr, "BUFFER TO SMALL TO WRITE QX");
 		if(d < nlen)
 			norms[d] = norm;
 		else fprintf(stderr, "BUFFER TO SMALL TO WRITE NORM");
+
+		printf("%i out of %i complete.\r", d + 1, num_detectors_x * num_detectors_y);
 	}
+	printf("\n");
 }
 
 
