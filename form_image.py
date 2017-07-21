@@ -16,16 +16,15 @@ class FormImage(pg.ImageView):
     def __init__(self, emitters=None, middles=None, detectors=None, radius=50E-9, index_refraction=1 - 2.67150153E-6):
         super(FormImage, self).__init__()
         self.index_refraction = index_refraction
-        IM_SIZE = 100
-        Q_RANGE = 80
+        IM_SIZE = 50
+        Q_RANGE = 30
 
         self.sphere_radius = radius
         num_points = 10
         length = ((num_points * 2) - 1) * 100e-9
 
         resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
-        self.probability_density, self.qz_values, self.qx_values = calc_norm((length, length), (200, 200), (Q_RANGE, Q_RANGE), (IM_SIZE, IM_SIZE), [[[0, 0, ((-length/2 + radius) + 4 * n * radius)], self.sphere_radius, index_refraction] for n in range(num_points)])
-        # self.probability_density, self.qz_values, self.qx_values = calc_norm((self.sphere_radius * 10, self.sphere_radius * 10), (500, 500), (Q_RANGE, Q_RANGE), (IM_SIZE, IM_SIZE), [[[0, 0, self.sphere_radius * 5], self.sphere_radius, 0], [[0, 0, -self.sphere_radius * 5], self.sphere_radius, 0]])
+        self.probability_density, self.qz_values, self.qx_values = calc_norm((1, 6 * self.sphere_radius), (400, 400), (Q_RANGE, Q_RANGE), (IM_SIZE, IM_SIZE), [[[0, 0, ((-length/2 + radius) + 4 * n * radius)], self.sphere_radius, index_refraction] for n in range(num_points)])
 
         #scale q values to 200x200
         self.qz_values = (FormImage.scale(np.array(self.qz_values)) * IM_SIZE).astype(int)

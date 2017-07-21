@@ -1,4 +1,5 @@
 import pyqtgraph as pg
+import resource
 import numpy as np
 from random import uniform
 from geometry import Point
@@ -21,11 +22,15 @@ class FormGraph(pg.PlotWidget):
         # print([[[0, 0, ((-length/2 + radius) + 4 * n * radius)], self.sphere_radius, index_refraction] for n in range(num_points)])
 
         # initialize emitters
-        pd1, qz1, qx1 = calc_norm((0, length), (1, 3000), (0, 20), (1, 20000), [[[0, 0, ((-length/2 + radius) + 4 * n * radius)], self.sphere_radius, index_refraction] for n in range(num_points)])
-        pd2, qz2, qx2 = calc_norm((0, length), (1, 200), (0, 20), (1, 20000), [[[0, 0, ((-length/2 + radius) + 4 * n * radius)], self.sphere_radius, index_refraction] for n in range(num_points)])
-        # pd1, qz1, qx1 = calc_norm((0, 15e-8), (1, 700), (0, 20), (1, 20000), [[[0, 0, -4.5e-8], 3e-8, 0], [[0, 0, 4.5e-8], 3e-8, 0]])
+        resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
+        pd1, qz1, qx1 = calc_norm((0, 6e-8), (1, 200), (0, 20), (1, 20000), [[[0, 0, 0], 3e-8, 0]])
+        pd2, qz2, qx2 = calc_norm((0, 6e-8), (1, 2000), (0, 20), (1, 20000), [[[0, 0, 0], 3e-8, 0]])
+        pd3, qz3, qx3 = calc_norm((0, 6e-8), (1, 20000), (0, 20), (1, 20000), [[[0, 0, 0], 3e-8, 0]])
+        pd4, qz4, qx4 = calc_norm((0, 6e-8), (1, 200000), (0, 20), (1, 20000), [[[0, 0, 0], 3e-8, 0]])
         self.plot(qz1, pd1, connect='all', pen="r")
-        self.plot(qz2, pd2, connect='all', pen="b")
+        self.plot(qz2, pd2, connect='all', pen="r")
+        self.plot(qz3, pd3, connect='all', pen="r")
+        self.plot(qz4, pd4, connect='all', pen="r")
 
         # pd2, qz2, qx2 = calc_norm((1, length), (1, 700), (1, 20), (1, 20000), [[[0, 0, 0], radius, 0]])
         # self.plot(qz2, pd2, connect='all', pen="b")

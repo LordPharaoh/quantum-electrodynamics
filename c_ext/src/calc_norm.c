@@ -15,11 +15,13 @@
 #define PLANCK_CONSTANT 6.62606993e-34
 #define REDUCED_PLANCK_CONSTANT 1.054571800e-34
 #define MOMENTUM 5.344294457349335e-24
+#define PHI 1.618033988749894
 
 #define EMITTER ((Vector) {0, -16, 0})
 #define MIDDLE_Y 1E-20
 #define DETECTOR_Y 4
 #define RANDOM 0
+#define SUNFLOWER 1
 
 #define IMAGE 1
 
@@ -50,6 +52,8 @@ void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, in
 	long double gridmaxy = IMAGE ? middle_grid_y * .5: middle_grid_y;
 	
 	int num_middles = 0;
+	int total_middles = 0;
+
 	for(double mid_x = gridminx; mid_x <= gridmaxx; mid_x += xm_step) {
 		for(double mid_z = gridminy; mid_z <= gridmaxy; mid_z += ym_step) {
 			/* Generate middle point */
@@ -57,6 +61,11 @@ void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, in
 			long double randx = (rand() / (double) RAND_MAX) * middle_grid_x - .5 * middle_grid_x;
 			long double randz = (rand() / (double) RAND_MAX) * middle_grid_y - .5 * middle_grid_y;
 			Vector middle = Vec3(randx, MIDDLE_Y, randz);
+			#elif SUNFLOWER
+			double r = (sqrt(total_middles + .5) / sqrt(num_middles_x * num_middles_y - .5)) * (gridmaxy);
+			double theta = 2 * M_PI * (total_middles + 1) / pow(PHI, 2);
+			Vector middle = Vec3(r * cos(theta), MIDDLE_Y, r * sin(theta));
+			total_middles++;
 			#else /* RANDOM */
 			Vector middle = Vec3(mid_x, MIDDLE_Y, mid_z);
 			# endif /* RANDOM */
