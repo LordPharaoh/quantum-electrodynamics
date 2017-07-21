@@ -38,6 +38,7 @@
     $7 = (double*) malloc(sizeof(double) * lenth);
     $8 = lenth;
     $3 = (double*) malloc(sizeof(double) * lenth);
+    printf("%p", $3);
     $4 = lenth;
     $1 = (int) PyInt_AsLong(PyTuple_GetItem(siz, 0));
     $2 = (int) PyInt_AsLong(PyTuple_GetItem(siz, 1));

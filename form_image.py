@@ -2,6 +2,7 @@ from __future__ import division
 import pyqtgraph as pg
 from random import uniform
 from geometry import Point, Circle
+import resource
 import sys
 import numpy as np
 from c_ext.calc_norm import calc_norm
@@ -12,29 +13,39 @@ import math
 
 class FormImage(pg.ImageView):
 
-    def __init__(self, emitters=None, middles=None, detectors=None, radius=5E-8, index_refraction=1 - 2.67150153E-6):
+    def __init__(self, emitters=None, middles=None, detectors=None, radius=50E-9, index_refraction=1 - 2.67150153E-6):
         super(FormImage, self).__init__()
         self.index_refraction = index_refraction
-        IM_SIZE = 200
-        Q_RANGE = 20
+        IM_SIZE = 100
+        Q_RANGE = 80
+
         self.sphere_radius = radius
-        self.probability_density, self.qz_values, self.qx_values = calc_norm((300e-9, 300e-9), (100, 100), (Q_RANGE, Q_RANGE), (IM_SIZE - 1, IM_SIZE - 1), 
-                                             [[[100e-9, 0, 0], self.sphere_radius, self.index_refraction], [[-100e-9, 0, 0], self.sphere_radius, self.index_refraction]])
+        num_points = 10
+        length = ((num_points * 2) - 1) * 100e-9
 
-
-        self.imarray = np.zeros((IM_SIZE, IM_SIZE), dtype=float);
+        resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
+        self.probability_density, self.qz_values, self.qx_values = calc_norm((length, length), (200, 200), (Q_RANGE, Q_RANGE), (IM_SIZE, IM_SIZE), [[[0, 0, ((-length/2 + radius) + 4 * n * radius)], self.sphere_radius, index_refraction] for n in range(num_points)])
+        # self.probability_density, self.qz_values, self.qx_values = calc_norm((self.sphere_radius * 10, self.sphere_radius * 10), (500, 500), (Q_RANGE, Q_RANGE), (IM_SIZE, IM_SIZE), [[[0, 0, self.sphere_radius * 5], self.sphere_radius, 0], [[0, 0, -self.sphere_radius * 5], self.sphere_radius, 0]])
 
         #scale q values to 200x200
-        self.qz_values = np.trunc(np.array(self.qz_values) * (IM_SIZE / Q_RANGE))
-        self.qx_values = np.trunc(np.array(self.qx_values) * (IM_SIZE / Q_RANGE))
+        self.qz_values = (FormImage.scale(np.array(self.qz_values)) * IM_SIZE).astype(int)
+        self.qx_values = (FormImage.scale(np.array(self.qx_values)) * IM_SIZE).astype(int)
         self.probability_density = FormImage.scale(np.array(self.probability_density))
+
+        print(min(self.qz_values))
+        print(min(self.qx_values))
+
+        self.imarray = np.zeros((IM_SIZE + 1, IM_SIZE + 1), dtype=float);
 
         for qz, qx, pd in zip(self.qz_values, self.qx_values, self.probability_density):
             try:
-                self.imarray[int(round(qx)), int(round(qz))] = pd
-            except ValueError:
+                self.imarray[qx, qz] = pd
+            except ValueError, IndexError:
                 print("failed at setting ({}, {}) to {}".format(qx, qz, pd))
 
+        # this method of delete is sketch but there should just be one black row so it should be ok I think?
+        self.imarray = np.vstack((np.flipud(self.imarray), self.imarray))
+        self.imarray = np.hstack((np.fliplr(self.imarray), self.imarray))
         self.setImage(self.imarray)
 
     @staticmethod
@@ -46,4 +57,3 @@ class FormImage(pg.ImageView):
             print("Saved")
             return np.ones(array.shape)
         return (array - min_) / divisor
-

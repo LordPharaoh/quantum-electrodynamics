@@ -19,11 +19,9 @@
 #define EMITTER ((Vector) {0, -16, 0})
 #define MIDDLE_Y 1E-20
 #define DETECTOR_Y 4
+#define RANDOM 0
 
-#define ARCS 0
-#define INTERSECTIONS 0
-#define UNBLOCKING 1
-#define FEYNMAN 0
+#define IMAGE 1
 
 
 long double q2cart(long double q) {
@@ -37,165 +35,86 @@ void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, in
 			   size_t nlen, Sphere* spheres, size_t spherelen) {
 
 	/* Determine step based on grid size and number of spots */
-	double xm_step = ((double) middle_grid_x) / num_middles_x;
-	double ym_step = ((double) middle_grid_y) / num_middles_y;
+	int dim_subtract = 1;
+	double xm_step = middle_grid_x == 0 ? 0.1 : ((double) middle_grid_x) / (num_middles_x - dim_subtract);
+	double ym_step = ((double) middle_grid_y) / (num_middles_y - dim_subtract);
 
-	double qxd_step = ((double) qx_range) / num_detectors_x;
-	double qyd_step = ((double) qy_range) / num_middles_y;
+	double qxd_step = qx_range == 0 ? 0.1 : ((double) qx_range) / (num_detectors_x - dim_subtract);
+	double qyd_step = ((double) qy_range) / (num_detectors_y - dim_subtract);
 
-	long double det_x = 0;
-	long double det_z = 0;
+	Vector middles[num_middles_x * num_middles_y];
 
-	for(int d = 0; d < num_detectors_x * num_detectors_y; d++) {
-
-		#if FEYNMAN
-		long double complex detector_sum = 0;
-		#else
-		long double complex detector_sum = 0;
-		#endif /* FEYNMAN */
-
-		/* generate detector point */
-		Vector detector = Vec3(q2cart(det_x), DETECTOR_Y, q2cart(det_z));
-		det_z += qyd_step;
-		if(det_z >= qy_range) {
-
-			det_z = 0;
-			det_x += qxd_step;
-		}
-
-		long double mid_x = -middle_grid_x * .5;
-		long double mid_z = -middle_grid_y * .5;
-
-		for(int m = 0; m < num_middles_x * num_middles_y; m++) {
-
+	long double gridminx = IMAGE ? -middle_grid_x * .5: 0;
+	long double gridmaxx = IMAGE ? middle_grid_x * .5: middle_grid_x;
+	long double gridminy = IMAGE ? -middle_grid_y * .5: 0;
+	long double gridmaxy = IMAGE ? middle_grid_y * .5: middle_grid_y;
+	
+	int num_middles = 0;
+	for(double mid_x = gridminx; mid_x <= gridmaxx; mid_x += xm_step) {
+		for(double mid_z = gridminy; mid_z <= gridmaxy; mid_z += ym_step) {
 			/* Generate middle point */
+			#if RANDOM
+			long double randx = (rand() / (double) RAND_MAX) * middle_grid_x - .5 * middle_grid_x;
+			long double randz = (rand() / (double) RAND_MAX) * middle_grid_y - .5 * middle_grid_y;
+			Vector middle = Vec3(randx, MIDDLE_Y, randz);
+			#else /* RANDOM */
 			Vector middle = Vec3(mid_x, MIDDLE_Y, mid_z);
-			mid_z += ym_step;
-			if(mid_z >= middle_grid_y) {
-				mid_z = 0;
-				mid_x += xm_step;
-			}
-
-			#if !FEYNMAN
-
-			long double time;	
-
-			#if ARCS
-
-			// calculate straight time from point to another over hte path of a big circle
-			if (v_collinear(e_proj, m_proj, d_proj) < 1e-20) {
-				//FIXME this line is causing a segfault raise_error(INVALID_ARGUMENT, "Points are collinear");
-				continue;
-			}
-			Circle large = c_from_points(e_proj, m_proj, d_proj);
-			time = c_arc_length(large, e_proj, d_proj) / C_CONST;
-
-			#else /* ARCS*/
-			#if UNBLOCKING
-			int in_sphere = 0;
+			# endif /* RANDOM */
 			for(int s = 0; s < spherelen; s++) {
 				if(v_dist(middle, spheres[s].center) < spheres[s].radius) {
-					in_sphere = 1;
+					middles[num_middles] = middle;
+					num_middles++;
 					break;
 				}
 			}
-			if(!in_sphere) continue;
-			#endif /* UNBLOCKING */
+		}
+	}
 
-			long double l1 = v_dist(EMITTER, middle);
-			long double l2 = v_dist(middle, detector);
-			time = (l1 + l2) / C_CONST;
-			#endif /* ARCS */
+	int d = 0;
 
+	for(double det_x = 0; det_x <= qx_range; det_x += qxd_step) {
+		for(double det_z = 0; det_z <= qy_range; det_z += qyd_step) {
 
-			#if ARCS || INTERSECTIONS
-			// Fit plane to the 3 points then project the points onto the plane
-			Plane cart = p_from_points(EMITTER, middle, detector);
+			Vector detector = Vec3(q2cart(det_x), DETECTOR_Y, q2cart(det_z));
+			long double complex detector_sum = 0;
 
-			Vector e_proj = p_project(cart, EMITTER);
-			Vector m_proj = p_project(cart, middle);
-			Vector d_proj = p_project(cart, detector);
-			#endif /* ARCS || INTERSECTIONS */
+			for(int m = 0; m < num_middles; m++) {
+				Vector middle = middles[m];
+				long double time;	
 
-			#if INTERSECTIONS
-			/* Loop through spheres */	
-			int insphere = 0;
-			for(int s = 0; s < spherelen; s++) {
+				long double l1 = v_dist(EMITTER, middle);
+				long double l2 = v_dist(middle, detector);
+				time = (l1 + l2) / C_CONST;
 
-				Sphere sphere = spheres[s];
-				Circle slice = s_slice(sphere, cart);
-				if(slice.radius != -1) continue;
-
-				#if ARCS /* 2 */
-				if (v_collinear(e_proj, m_proj, d_proj) < 1e-20) {
-					//FIXME this line is causing a segfault raise_error(INVALID_ARGUMENT, "Points are collinear");
+				#ifdef NAN
+				if(isnan(time)) {
+					printf("Threw out nan\n");
 					continue;
 				}
-
-				Vector intersections[2];
-				Circle large = c_from_points(e_proj, m_proj, d_proj);
-				c_intersection(slice, large, intersections);
-				long double dist = c_arc_length(large, intersections[0], intersections[1]);
-				time -= (dist / C_CONST) - (dist * sphere.refrac_idx / C_CONST);
-				#else /* ARCS 2 */
-				//sphere intersections
-				Vector p1 = p_unproject(cart, c_v_intersection(slice, e_proj, m_proj));
-				Vector p2 = p_unproject(cart, c_v_intersection(slice, m_proj, d_proj));
-
-				long double l2 = v_dist(p1, middle) + v_dist(middle, p2);
-
-				time += (l2 / C_CONST) - (l2 * sphere.refrac_idx / C_CONST);
-				#endif /* ARCS 2 */ 
-			} 
-			#endif /* INTERSECTIONS */
-
-			#ifdef NAN
-			if(isnan(time)) {
-				printf("Threw out nan\n");
-				continue;
-			}
-			#elif defined(INFINITY)
-			if(isinf(time)) {
-				continue;
-				printf("Threw out infinity\n");
-			}
-			#endif /* INFINITY */
-			long double complex wave = cexp(time * FREQUENCY * I);
-			detector_sum += wave;
-			#else /* FEYNMAN! */
-
-			#if UNBLOCKING
-			int in_sphere = 0;
-			for(int s = 0; s < spherelen; s++) {
-				if(v_dist(middle, spheres[s].center) < spheres[s].radius) {
-					in_sphere = 1;
-					break;
+				#elif defined(INFINITY)
+				if(isinf(time)) {
+					continue;
+					printf("Threw out infinity\n");
 				}
+				#endif /* INFINITY */
+				long double complex wave = cexp(time * FREQUENCY * I);
+				detector_sum += wave;
 			}
-			if(!in_sphere) continue;
-			#endif /* UNBLOCKING */
-			Vector unit = v_mult(middle, 1 / v_norm(middle));
-			Vector momentum = Vec3(0, MOMENTUM, 0); // v_mult(unit, MOMENTUM);
 
-			Vector dist = v_sub(EMITTER, detector);
-			detector_sum += cexp(I * v_dot(dist, momentum) / REDUCED_PLANCK_CONSTANT) / v_norm(dist);
+			double norm = (double) (log(pow(cabs(detector_sum), 2)));
+			if(d < qzlen)
+				qzs[d] = det_z;
+			else fprintf(stderr, "BUFFER TOO SMALL TO WRITE QZ\n");
+			if(d < qxlen)
+				qxs[d] = det_x;
+			else fprintf(stderr, "BUFFER TOO SMALL TO WRITE QX\n");
+			if(d < nlen)
+				norms[d] = norm;
+			else fprintf(stderr, "BUFFER TOO SMALL TO WRITE NORM\n");
 
-			#endif /* !FEYNMAN */
+			printf("%i out of %i complete.\r", d + 1, num_detectors_x * num_detectors_y);
+			d++;
 		}
-		double norm = (double) (log(pow(cabs(detector_sum), 2)));
-		if(d < qzlen)
-			qzs[d] = det_z;
-		else fprintf(stderr, "BUFFER TO SMALL TO WRITE QZ");
-		if(d < qxlen)
-			qxs[d] = det_x;
-		else fprintf(stderr, "BUFFER TO SMALL TO WRITE QX");
-		if(d < nlen)
-			norms[d] = norm;
-		else fprintf(stderr, "BUFFER TO SMALL TO WRITE NORM");
-
-		printf("%i out of %i complete.\r", d + 1, num_detectors_x * num_detectors_y);
 	}
 	printf("\n");
 }
-
-
