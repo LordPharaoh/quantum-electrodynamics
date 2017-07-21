@@ -21,7 +21,7 @@
 #define MIDDLE_Y 1E-20
 #define DETECTOR_Y 4
 #define RANDOM 0
-#define SUNFLOWER 1
+#define SUNFLOWER 0
 
 #define IMAGE 1
 

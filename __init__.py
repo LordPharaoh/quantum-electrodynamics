@@ -17,7 +17,7 @@ class QEDPlugin(base.plugin):
         self.toolbbar = None
         # self.main_view = Main3DView()
         # self.centerwidget.addWidget(self.main_view)
-        self.form_graph = FormImage()
+        self.form_graph = FormGraph()
         self.centerwidget.addWidget(self.form_graph)
         # self.rightwidget.addWidget(self.main_view)
         super(QEDPlugin, self).__init__(*args, **kwargs)

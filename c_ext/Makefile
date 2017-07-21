@@ -20,7 +20,7 @@ vector:
 	mv $(SWIG_DIR)/vector.py .
 	$(CC) $(SWIG_CFLAGS) $(INCLUDE) $(PYTHON) $(BUILD)/vector_wrap.c $(SRC)/vector.c $(SRC)/except.c
 	mv *.o build
-	gcc -shared build/*.o -o _vector.so
+	gcc -ffast-math -shared build/*.o -o _vector.so
 
 circle:
 	$(SWIG) -python $(SWIG_DIR)/circle.i
@@ -28,14 +28,14 @@ circle:
 	mv $(SWIG_DIR)/circle.py .
 	$(CC) $(SWIG_CFLAGS) $(INCLUDE) $(PYTHON) $(BUILD)/circle_wrap.c $(SRC)/circle.c $(SRC)/except.c $(SRC)/vector.c
 	mv *.o build
-	gcc -shared build/*.o -o _circle.so
+	gcc -ffast-math -shared build/*.o -o _circle.so
 
 sphere:
 	$(SWIG) -python $(SWIG_DIR)/sphere.i
 	mv $(SWIG_DIR)/sphere_wrap.c $(BUILD)
 	$(CC) $(SWIG_CFLAGS) $(INCLUDE) $(PYTHON) $(BUILD)/sphere_wrap.c $(SRC)/plane.c $(SRC)/circle.c $(SRC)/sphere.c $(SRC)/except.c $(SRC)/vector.c 
 	mv *.o build
-	gcc -shared build/*.o -o _sphere.so
+	gcc -ffast-math -shared build/*.o -o _sphere.so
 
 calc_norm:
 	$(SWIG) -python $(SWIG_DIR)/calc_norm.i
@@ -43,7 +43,7 @@ calc_norm:
 	mv $(SWIG_DIR)/calc_norm.py .
 	$(CC) $(SWIG_CFLAGS) $(INCLUDE) $(PYTHON) $(BUILD)/calc_norm_wrap.c $(SRC)/plane.c $(SRC)/circle.c $(SRC)/calc_norm.c $(SRC)/except.c $(SRC)/vector.c $(SRC)/sphere.c
 	mv *.o build
-	gcc -shared build/*.o -o _calc_norm.so
+	gcc -ffast-math -shared build/*.o -o _calc_norm.so
 
 clean:
 	rm build/*

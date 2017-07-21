@@ -16,11 +16,11 @@ class FormImage(pg.ImageView):
     def __init__(self, emitters=None, middles=None, detectors=None, radius=50E-9, index_refraction=1 - 2.67150153E-6):
         super(FormImage, self).__init__()
         self.index_refraction = index_refraction
-        IM_SIZE = 50
+        IM_SIZE = 150
         Q_RANGE = 30
 
         self.sphere_radius = radius
-        num_points = 10
+        num_points = 90
         length = ((num_points * 2) - 1) * 100e-9
 
         resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
