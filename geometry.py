@@ -211,7 +211,7 @@ class Plane(object):
         # Construct plane from 4 coefficients
         elif len(args) == 4:
             self.cross_product = Vector(*args[:3])
-            self.d = args[4]
+            self.d = args[3]
 
         # Construct plane from a cross-product Vector and a Point
         elif len(args) == 2 and isinstance(args[0], Vector) and isinstance(args[1], Point):

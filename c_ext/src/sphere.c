@@ -1,4 +1,5 @@
 #include <math.h>
+#include <assert.h>
 #include "sphere.h"
 
 
@@ -15,8 +16,12 @@ Circle s_slice(Sphere s, Plane p) {
 	}
 
 	long double angle = acos(dist / s.radius);
+	assert(v_isnormal(p.cross_product));
+	assert(v_isnormal(s.center));
 	Vector circle_center = p_project(p, s.center);
 
+	assert(v_isnormal(circle_center));
+	assert(isnormal(s.radius));
 	return c_new(circle_center, s.radius * sin(angle));
 }
 

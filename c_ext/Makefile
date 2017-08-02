@@ -6,18 +6,22 @@ INCLUDE = -Iinclude/
 PYTHON = -I/usr/include/python2.7/
 BUILD = build/
 SOURCES = $(shell find $(SRC) -name '*.c')
+LFLAGS = -ffast-math -lpthread -shared 
 
 SWIG_CFLAGS = -c -fPIC
 
-all: vector circle sphere sphere calc_norm
+all: vector circle sphere calc_norm
+
+main: 
+	$(CC) $(INCLUDE) src/except.c src/vector.c src/circle.c src/sphere.c src/plane.c src/main.c -o testout -lm
 
 vector:
 	$(SWIG) -python $(SWIG_DIR)/vector.i
 	mv $(SWIG_DIR)/vector_wrap.c $(BUILD)
 	mv $(SWIG_DIR)/vector.py .
-	$(CC) $(SWIG_CFLAGS) $(INCLUDE) $(PYTHON) $(BUILD)/vector_wrap.c $(SRC)/vector.c $(SRC)/except.c
+	$(CC) -fPIC $(SWIG_CFLAGS) $(INCLUDE) $(PYTHON) $(BUILD)/vector_wrap.c $(SRC)/vector.c $(SRC)/except.c
 	mv *.o build
-	gcc -ffast-math -lpthread -shared build/*.o -o _vector.so
+	gcc $(LFLAGS) build/*.o -o _vector.so
 
 circle:
 	$(SWIG) -python $(SWIG_DIR)/circle.i

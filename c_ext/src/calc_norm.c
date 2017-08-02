@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <float.h>
+#include <assert.h>
 #include <pthread.h>
 #include "except.h"
 #include "vector.h"
@@ -20,11 +21,19 @@
 
 #define EMITTER ((Vector) {0, -16, 0})
 #define MIDDLE_Y 1E-20
+#define MIDDLE_X 1E-20
 #define DETECTOR_Y 4
+
 #define RANDOM 0
 #define SUNFLOWER 0
+#define ON_SPHERE 1
+
+#define ARC_INTERSECTIONS 0
+#define INTERSECTIONS 0
 
 #define IMAGE 1
+
+#define NUM_THREADS 20
 
 
 double q2cart(double q) {
@@ -43,12 +52,13 @@ typedef struct {
 	size_t qzlen;
 	double* norms;
 	size_t nlen;
+	Sphere* spheres;
+	size_t spherelen;
 } Args;
 
 
 void* calculate_detectors(void* args) {
 	Args a = (*(Args*) args);
-	printf("%e %e %e %e %e %e\n", a.start_x, a.start_y, a.end_x, a.end_y, a.x_step, a.y_step);
 
 	Vector* middles = a.middles;
 
@@ -65,12 +75,70 @@ void* calculate_detectors(void* args) {
 
 			for(int m = 0; m < a.num_middles; m++) {
 				Vector middle = middles[m];
-				double time;	
-				double l2 = v_dist(middle, detector);
-				time = (a.middle_distance[m] + l2) / C_CONST;
 
-				double complex wave = cexp(time * FREQUENCY * I);
-				detector_sum += wave;
+				#if INTERSECTIONS || ARC_INTERSECTIONS
+				// fit plane onto three point
+				Plane cart = p_from_points(EMITTER, middle, detector);
+				//project points onto plane
+				Vector e_proj = p_project(cart, EMITTER);
+				Vector m_proj = p_project(cart, middle);
+				Vector d_proj = p_project(cart, detector);
+				#endif /* INTERSECTIONS */
+
+				//iter through spheres looking for intersections
+				for(int s = 0; s < a.spherelen; s++) {
+					Sphere sphere = a.spheres[s];
+					#if INTERSECTIONS || ARC_INTERSECTIONS
+					Circle slice = s_slice(sphere, cart);
+					// We are outside the sphere if this is true
+					if(slice.radius == -1) {
+						clear_exception();
+						printf("Skipped at slice\n");
+						continue;
+					}
+					#else /* INTERSECTIONS */
+					if(v_dist(middle, sphere.center) > sphere.radius) {
+						continue;
+					}
+					#endif /* INTERSECTIONS */
+
+
+					#if INTERSECTIONS
+					Vector intersections[2];
+					intersections[0] = c_v_intersection(slice, e_proj, m_proj);
+					intersections[1] = c_v_intersection(slice, m_proj, d_proj);
+
+					long double l2 = v_dist(intersections[0], intersections[1]);
+					double l1 = v_dist(e_proj, intersections[0]) + v_dist(intersections[1], d_proj);
+					
+					// printf("Projected %Le Unprojected %Le\n", v_dist(EMITTER, middle), v_dist(e_proj, m_proj));
+					// double l1 = v_dist(EMITTER, intersections[0]) + v_dist(intersections[1], detector);
+
+					double time = (l1 / C_CONST) + (l2 / (C_CONST / sphere.refrac_idx));
+					#elif ARC_INTERSECTIONS
+					double dist = p_dist(cart, sphere.center);
+					double angle = acos(dist / sphere.radius);
+					Circle small = c_new(Vec2(0, 0), sphere.radius * sin(angle));
+					Circle large = c_from_points(e_proj, m_proj, d_proj);
+
+					Vector intersections[2];
+					c_intersection(small, large, intersections);
+					double time =  (c_arc_length(large, e_proj, intersections[0]) / C_CONST)
+								 + (c_arc_length(large, intersections[0], intersections[1]) / (C_CONST / sphere.refrac_idx))
+								 + (c_arc_length(large, intersections[1], d_proj) / C_CONST);
+					
+					#else /* INTERSECTIONS */
+					double dist = v_dist(EMITTER, middle) + v_dist(middle, detector);
+					double time = dist / C_CONST;
+					#endif /* INTERSECTIONS */
+
+					if(!isnormal(time)) {
+						continue;
+					}
+
+					double complex wave = cexp(time * FREQUENCY * I);
+					detector_sum += wave;
+				}
 			}
 
 			double norm = (double) (log(pow(cabs(detector_sum), 2)));
@@ -84,11 +152,15 @@ void* calculate_detectors(void* args) {
 				norms[d] = norm;
 			else fprintf(stderr, "BUFFER TOO SMALL TO WRITE NORM\n");
 
-			//printf("Thread %i: %i complete.\n", a.threadno, d + 1);
+			if ((d % 100) == 0) {
+				printf("Thread %i: %i complete.\n", a.threadno, d + 1);
+			}
 			d++;
 		}
 	}
 	return NULL;
+
+
 }
 
 
@@ -122,14 +194,14 @@ void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, in
 			#if RANDOM
 			double randx = (rand() / (double) RAND_MAX) * middle_grid_x - .5 * middle_grid_x;
 			double randz = (rand() / (double) RAND_MAX) * middle_grid_y - .5 * middle_grid_y;
-			Vector middle = Vec3(randx, MIDDLE_Y, randz);
+			Vector middle = Vec3(randx != 0 ? randx : MIDDLE_X, MIDDLE_Y, randz);
 			#elif SUNFLOWER
 			double r = (sqrt(total_middles + .5) / sqrt(num_middles_x * num_middles_y - .5)) * (gridmaxy);
 			double theta = 2 * M_PI * (total_middles + 1) / pow(PHI, 2);
 			Vector middle = Vec3(r * cos(theta), MIDDLE_Y, r * sin(theta));
 			total_middles++;
 			#else /* RANDOM */
-			Vector middle = Vec3(mid_x, MIDDLE_Y, mid_z);
+			Vector middle = Vec3(mid_x != 0 ? mid_x : MIDDLE_X, MIDDLE_Y, mid_z);
 			# endif /* RANDOM */
 			for(int s = 0; s < spherelen; s++) {
 				if(v_dist(middle, spheres[s].center) < spheres[s].radius) {
@@ -142,17 +214,21 @@ void calc_norm(double middle_grid_x, double middle_grid_y, int num_middles_x, in
 		}
 	}
 
-	Args a1 = (Args) {0, 0,              qx_range, qy_range * .25, qxd_step, qyd_step, 0, &middles, &middle_distance, num_middles, qxs,            qxlen/4, qzs,            qzlen/4, norms,           nlen/4};
-	Args a2 = (Args) {0, qy_range * .25, qx_range, qy_range * .5,  qxd_step, qyd_step, 1, &middles, &middle_distance, num_middles, &qxs[qxlen/4],   qxlen/4, &qzs[qzlen/4],   qzlen/4, &norms[nlen/4],   nlen/4};
-	Args a3 = (Args) {0, qy_range * .5,  qx_range, qy_range * .75, qxd_step, qyd_step, 2, &middles, &middle_distance, num_middles, &qxs[qxlen/2],   qxlen/4, &qzs[qzlen/2],   qzlen/4, &norms[nlen/2],   nlen/4};
-	Args a4 = (Args) {0, qy_range * .75, qx_range, qy_range,       qxd_step, qyd_step, 3, &middles, &middle_distance, num_middles, &qxs[3*qxlen/4], qxlen/4, &qzs[3*qzlen/4], qzlen/4, &norms[3*nlen/4], nlen/4};
-	pthread_t p1, p2, p3, p4;
-	pthread_create(&p1, NULL, calculate_detectors, &a1);
-	pthread_create(&p2, NULL, calculate_detectors, &a2);
-	pthread_create(&p3, NULL, calculate_detectors, &a3);
-	pthread_create(&p4, NULL, calculate_detectors, &a4);
-	pthread_join(p1, NULL);
-	pthread_join(p2, NULL);
-	pthread_join(p3, NULL);
-	pthread_join(p4, NULL);
+	pthread_t threads[NUM_THREADS];
+	double step = pow((double) NUM_THREADS, -1);
+	Args a[NUM_THREADS];
+
+	for(int t = 0; t < NUM_THREADS; t++) {
+		int qxidx = (int) qxlen * t * step;
+		int qzidx = (int) qzlen * t * step;
+		int nidx = (int) nlen * t * step;
+		a[t] = (Args) { 0, qy_range * step * t, qx_range, qy_range * step * (t + 1), qxd_step, qyd_step, t, 
+						middles, middle_distance, num_middles, &(qxs[qxidx]), qxlen * step, &(qzs[qzidx]), 
+						qzlen * step, &(norms[nidx]), nlen * step, spheres, spherelen };
+		pthread_create(&threads[t], NULL, calculate_detectors, &a[t]);
+	}
+
+	for(int t = 0; t < NUM_THREADS; t++) {
+		pthread_join(threads[t], NULL);
+	}
 }

@@ -1,3 +1,4 @@
+from __future__ import division
 import pyqtgraph as pg
 import resource
 import numpy as np
@@ -10,7 +11,7 @@ import warnings
 
 class FormGraph(pg.PlotWidget):
 
-    def __init__(self, emitters=None, middles=None, detectors=None, radius=50e-9, index_refraction= 1 + 2.67150153E-3):
+    def __init__(self, emitters=None, middles=None, detectors=None, radius=50e-9, index_refraction= 1 - 2.67150153E-6):
         super(FormGraph, self).__init__(title="Form Factor of Sphere with Curved Paths",
                                         bottom="Q Value", left="Probability Density")
         self.index_refraction = index_refraction
@@ -24,23 +25,18 @@ class FormGraph(pg.PlotWidget):
         # initialize emitters
 
         resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
-        middles = [100, 200, 300, 400, 500, 10000, 50000, 100000, 500000]
+        middles = [1e3, 1e4]
         for idx, mid in enumerate(middles):
-            pd1, qz1, qx1 = calc_norm((0, 6e-8), (1, mid), (0, 10), (1, 10000), [[[0, 0, 0], 3e-8, 0]])
-            self.plot(qz1, FormGraph.scale(pd1), connect='all', pen=pg.mkPen((255, 0, 255 - ((255 / 9) * idx))))
-        # pd2, qz2, qx2 = calc_norm((1, length), (1, 700), (1, 20), (1, 20000), [[[0, 0, 0], radius, 0]])
-        # self.plot(qz2, pd2, connect='all', pen="b")
+            pd1, qz1, qx1 = calc_norm((0, 6e-8), (1, mid), (0, 10), (1, 1000), [[[0, 0, 1e-10], 3e-8, 1]])
+            self.plot(qz1, FormGraph.scale(pd1), connect='all', pen=pg.mkPen(((255 / len(middles)) * idx, 0, 255 - ((255 / len(middles)) * idx))))
 
-        # pd3 = (np.array(pd1) - np.array(pd2)).tolist()
-        # self.plot(qz2, pd3, symbol="o", symbolPen="#000000", symbolBrush="g", symbolSize=4, connect='all', pen="g")
     @staticmethod
     def scale(array):
         """ Normalizes variables in an array to between 0 and 1 by manipulating them based on the min and max functions """
         if isinstance(array, list):
             array = np.array(array)
-        min_ = min(array)
+        min_ = 0
         divisor = max(array) - min_
         if divisor == 0:
-            print("Saved")
             return np.ones(array.shape)
         return (array - min_) / divisor

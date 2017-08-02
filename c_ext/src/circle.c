@@ -49,7 +49,8 @@ Vector l_intersection(long double l1[2], long double l2[2]) {
 Circle c_from_points(Vector v1, Vector v2, Vector v3) {
 	if (v_slope(v1, v2) == v_slope(v3, v2)) {
 		//TODO python error here
-		fprintf(stderr, "Points used to make Circle are collinear. Make this a python error");
+		fprintf(stderr, "Points used to make Circle are collinear. Make this a python error\n");
+		return c_new(Vec3(-1, -1, -1), -1);
 	}
 
 	for(int i = 0; i < 6; i++) {

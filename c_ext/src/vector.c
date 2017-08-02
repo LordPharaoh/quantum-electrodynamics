@@ -34,6 +34,7 @@ Vector v_mult(Vector v, long double s) {
 
 
 long double v_norm(Vector v) {
+	// printf("VSUM %Le VDOT %Le\n", v_dot(v, Vec3(1, 1, 1)), v_dot(v, v));
 	return sqrt(v_dot(v, v));
 }
 
@@ -92,4 +93,18 @@ int v_equal(Vector v1, Vector v2) {
 void _v_string(char* str, size_t size, Vector v) {
 	// This is unusable in python because of fundamentally different string handling
 	snprintf(str, size, "<%Lf, %Lf, %Lf>", v.x, v.y, v.z);
+}
+
+
+int v_isnormal(Vector v) {
+	return (isnormal(v.x) || v.x == 0) && 
+		   (isnormal(v.y) || v.y == 0) && 
+		   (isnormal(v.z) || v.z == 0) &&
+		   (v.x || v.y || (v.z > 0));
+}
+
+
+Vector v_normalize(Vector v) {
+	long double div = pow(sqrt(pow(v.x, 2) + pow(v.y, 2) + pow(v.z, 2)), -1);
+	return v_mult(v, div);
 }

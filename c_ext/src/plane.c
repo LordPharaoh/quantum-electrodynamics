@@ -1,9 +1,12 @@
+#include <assert.h>
+
 #include "vector.h"
 #include "except.h"
 #include "plane.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 
 Axis x_axis(Plane);
 Axis y_axis(Plane);
@@ -20,7 +23,7 @@ Plane wrap_axis(Axis a) {
 
 Plane p_new(Vector cp, long double d) {
 	Plane p;
-	p.cross_product = cp;
+	p.cross_product = v_normalize(cp);
 	p.d = d;
 	p.center = p_closest(p, Vec3(0, 0, 0));
 	p.x_axis = x_axis(p);
@@ -30,10 +33,9 @@ Plane p_new(Vector cp, long double d) {
 
 
 Axis p_from_cp_cent_noaxes(Vector cp, Vector point) {
-
 	long double d = -1.0 * (v_dot(cp, point));
 	Axis p;
-	p.cross_product = cp;
+	p.cross_product = v_normalize(cp);
 	p.d = d;
 	p.center = p_closest(wrap_axis(p), Vec3(0, 0, 0));
 	return p;
@@ -43,6 +45,7 @@ Axis p_from_cp_cent_noaxes(Vector cp, Vector point) {
 Axis x_axis(Plane p) {
 	/// Constructs an orthogonal x-axis for a plane
 	Vector cp = v_sub(p_closest(p, Vec3(1, 0, 0)), p.center);
+	cp = v_normalize(cp);
 	return p_from_cp_cent_noaxes(cp, p.center);
 }
 
@@ -50,6 +53,9 @@ Axis x_axis(Plane p) {
 Axis y_axis(Plane p) {
 	/// Constructs a y-axis orthogonal to a plane and its x axis
 	Vector cp = v_cross(p.x_axis.cross_product, p.cross_product);
+	cp = v_normalize(cp);
+	Vector px = p.x_axis.cross_product;
+	px = p.cross_product;
 	return p_from_cp_cent_noaxes(cp, p.center);
 }
 
